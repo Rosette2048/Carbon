@@ -22,6 +22,7 @@ DEMO_USERNAME = os.environ.get("DEMO_USERNAME", "demo")
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "")
 GDELT_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 CACHE_TTL_SECONDS = 5 * 60
+PUBLIC_FILES = {"/carbon_market_monitor.html", "/carbon_market_price_data.js"}
 
 MARKET_QUERIES = {
     "eu": '("EU ETS" OR "European Union Emissions Trading System" OR "European carbon market" OR "European carbon allowance")',
@@ -268,6 +269,11 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.is_authorized():
             self.request_authentication()
             return
+        if parsed.path == "/":
+            self.send_response(302)
+            self.send_header("Location", "/carbon_market_monitor.html")
+            self.end_headers()
+            return
         if parsed.path == "/api/news":
             query = parse_qs(parsed.query)
             try:
@@ -282,6 +288,9 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             result = fetch_combined_news(market, start, end, category)
             json_response(self, result, 200 if result.get("ok") else 422)
+            return
+        if parsed.path not in PUBLIC_FILES:
+            self.send_error(404, "Not Found")
             return
         super().do_GET()
 
