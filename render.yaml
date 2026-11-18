@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: carbon-market-monitor
+    runtime: python
+    plan: free
+    buildCommand: python -m py_compile carbon_market_news_server.py
+    startCommand: python carbon_market_news_server.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: HOST
+        value: 0.0.0.0
+      - key: DEMO_USERNAME
+        sync: false
+      - key: DEMO_PASSWORD
+        sync: false
