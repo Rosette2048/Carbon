@@ -59,7 +59,7 @@
     .status-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--positive); box-shadow: 0 0 0 3px rgba(35,119,94,.15); }
     .status-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .status-copy strong { font-size: 10px; white-space: nowrap; }
-    .status-copy span { color: var(--muted); font-size: 9px; white-space: nowrap; }
+    .status-copy span { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 
     .market-strip { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 9px 16px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.72); }
     .market-name { display: flex; align-items: center; gap: 9px; min-width: 0; }
@@ -230,7 +230,6 @@
             <div>
               <div class="forecast-kicker">AI forecast · 14-day horizon</div>
               <div class="forecast-value"><strong id="forecastValue">—</strong><span id="forecastCurrency">per tCO₂e</span></div>
-              <div class="forecast-disclaimer">AI forecast for demonstration purposes only</div>
             </div>
             <div>
               <div class="forecast-meta"><span>Expected change <strong id="forecastChange">—</strong></span><span>Direction <strong id="forecastDirection">—</strong></span><span>Confidence <strong id="forecastConfidence">—</strong></span><span>Forecast window <strong id="forecastWindow">—</strong></span></div>
@@ -459,10 +458,10 @@
             }
           }
           if (data.gdelt_message && data.factiva_count) {
-            $('statusText').textContent = `Factiva loaded · GDELT unavailable · ${sentiment.configured && sentiment.ok ? 'sentiment ready' : 'sentiment pending'}${forecast?.ok ? ' · forecast ready' : ''}`;
+            $('statusText').textContent = `F${data.factiva_count} · GDELT unavailable · ${sentiment.configured && sentiment.ok ? 'HKU ready' : 'HKU pending'}${forecast?.ok ? ' · AI ready' : ''}`;
           } else {
             $('statusText').textContent = data.ok
-              ? `Factiva ${data.factiva_count ?? 0} · GDELT ${data.gdelt_count ?? 0} · ${sentiment.configured && sentiment.ok ? 'sentiment ready' : 'sentiment pending'}${forecast?.ok ? ' · forecast ready' : ''}`
+              ? `F${data.factiva_count ?? 0} · G${data.gdelt_count ?? 0} · ${sentiment.configured && sentiment.ok ? 'HKU ready' : 'HKU pending'}${forecast?.ok ? ' · AI ready' : ''}`
               : 'News sources returned no data';
           }
         } catch (error) {
@@ -645,7 +644,7 @@
       $('endDate').addEventListener('change', (event) => { state.end = event.target.value; if (state.end < state.start) state.start = state.end; normalizeDates(); render(); });
       $('previousMarket').addEventListener('click', () => { state.currentIndex = (state.currentIndex - 1 + state.selected.length) % state.selected.length; normalizeDates(); render(); });
       $('nextMarket').addEventListener('click', () => { state.currentIndex = (state.currentIndex + 1) % state.selected.length; normalizeDates(); render(); });
-      $('refreshButton').addEventListener('click', () => { $('statusText').textContent = 'Refreshing GDELT…'; render(); });
+      $('refreshButton').addEventListener('click', () => { $('statusText').textContent = 'Refreshing…'; render(); });
       setInterval(loadNews, 15 * 60 * 1000);
 
       normalizeDates(true);
