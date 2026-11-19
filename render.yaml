@@ -15,3 +15,11 @@ services:
         sync: false
       - key: DEMO_PASSWORD
         sync: false
+      - key: HKU_API_BASE_URL
+        value: https://api.hku.hk
+      - key: HKU_API_DEPLOYMENT_ID
+        value: claude-haiku-4.5
+      - key: HKU_API_KEY_HEADER
+        value: api-key
+      - key: HKU_API_KEY
+        sync: false

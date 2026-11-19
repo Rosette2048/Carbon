@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 import re
 import secrets
 import ssl
+import statistics
 import threading
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -22,6 +24,11 @@ DEMO_USERNAME = os.environ.get("DEMO_USERNAME", "demo")
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "")
 GDELT_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 CACHE_TTL_SECONDS = 5 * 60
+SENTIMENT_CACHE_TTL_SECONDS = 15 * 60
+HKU_API_BASE_URL = os.environ.get("HKU_API_BASE_URL", "https://api.hku.hk")
+HKU_API_DEPLOYMENT_ID = os.environ.get("HKU_API_DEPLOYMENT_ID", "claude-haiku-4.5")
+HKU_API_KEY = os.environ.get("HKU_API_KEY", "")
+HKU_API_KEY_HEADER = os.environ.get("HKU_API_KEY_HEADER", "api-key")
 PUBLIC_FILES = {"/carbon_market_monitor.html", "/carbon_market_price_data.js"}
 
 MARKET_QUERIES = {
@@ -39,6 +46,8 @@ CATEGORY_TERMS = {
 
 _cache: dict[str, tuple[float, dict]] = {}
 _cache_lock = threading.Lock()
+_sentiment_cache: dict[str, tuple[float, dict]] = {}
+_sentiment_cache_lock = threading.Lock()
 FACTIVA_PATH = Path(__file__).with_name("carbon_market_factiva_news.json")
 try:
     FACTIVA_PAYLOAD = json.loads(FACTIVA_PATH.read_text(encoding="utf-8"))
@@ -57,6 +66,142 @@ def json_response(handler: SimpleHTTPRequestHandler, payload: dict, status: int 
     handler.send_header("Content-Length", str(len(body)))
     handler.end_headers()
     handler.wfile.write(body)
+
+
+def parse_json_text(value: str) -> dict | list:
+    cleaned = (value or "").strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE | re.DOTALL).strip()
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        start = min([index for index in (cleaned.find("{"), cleaned.find("[")) if index >= 0], default=-1)
+        if start < 0:
+            raise
+        decoder = json.JSONDecoder()
+        parsed, _ = decoder.raw_decode(cleaned[start:])
+        return parsed
+
+
+def sentiment_metrics(scores: list[float]) -> dict:
+    if not scores:
+        return {
+            "median_score": None,
+            "positive_share": None,
+            "neutral_share": None,
+            "negative_share": None,
+            "news_count": 0,
+            "score_dispersion": None,
+        }
+    count = len(scores)
+    return {
+        "median_score": round(statistics.median(scores), 4),
+        "positive_share": round(sum(score > 0.1 for score in scores) / count, 4),
+        "neutral_share": round(sum(-0.1 <= score <= 0.1 for score in scores) / count, 4),
+        "negative_share": round(sum(score < -0.1 for score in scores) / count, 4),
+        "news_count": count,
+        "score_dispersion": round(statistics.pstdev(scores) if count > 1 else 0.0, 4),
+    }
+
+
+def sentiment_cache_key(articles: list[dict]) -> str:
+    compact = [
+        {
+            "id": article.get("id", ""),
+            "title": article.get("title", ""),
+            "summary": article.get("summary", ""),
+        }
+        for article in articles
+    ]
+    return hashlib.sha256(json.dumps(compact, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def extract_hku_text(payload: dict) -> str:
+    content = payload.get("output", {}).get("message", {}).get("content", [])
+    return "\n".join(block.get("text", "") for block in content if isinstance(block, dict) and block.get("text"))
+
+
+def fetch_hku_sentiment(articles: list[dict]) -> dict:
+    if not HKU_API_KEY:
+        return {
+            "ok": True,
+            "configured": False,
+            "message": "HKU GenAI API key is not configured in the server environment.",
+            "scores": {},
+            "metrics": sentiment_metrics([]),
+        }
+    if not articles:
+        return {"ok": True, "configured": True, "scores": {}, "metrics": sentiment_metrics([])}
+
+    limited_articles = articles[:40]
+    cache_key = sentiment_cache_key(limited_articles)
+    now = time.time()
+    with _sentiment_cache_lock:
+        cached = _sentiment_cache.get(cache_key)
+        if cached and now - cached[0] < SENTIMENT_CACHE_TTL_SECONDS:
+            result = dict(cached[1])
+            result["cached"] = True
+            return result
+
+    items = []
+    for article in limited_articles:
+        title = (article.get("title") or "").strip()
+        summary = (article.get("summary") or "").strip()
+        items.append({"id": article.get("id", ""), "title": title[:500], "summary": summary[:800]})
+    prompt = (
+        "You are a financial-news sentiment classifier for carbon allowance markets. "
+        "Score each news item from -1.0 (strongly bearish for the relevant carbon price) "
+        "to 1.0 (strongly bullish), where 0 is neutral. Return JSON only, with no markdown, "
+        "using exactly this shape: {\"items\":[{\"id\":\"...\",\"score\":0.0,\"label\":\"positive|neutral|negative\"}]}. "
+        "Judge the likely short-term effect on the carbon allowance price, not whether the article is morally positive.\n\n"
+        + json.dumps(items, ensure_ascii=False)
+    )
+    endpoint = f"{HKU_API_BASE_URL.rstrip('/')}/claude/model/{HKU_API_DEPLOYMENT_ID}/converse"
+    request_body = {
+        "inferenceConfig": {"maxTokens": max(300, len(items) * 35), "temperature": 0},
+        "messages": [{"role": "user", "content": [{"text": prompt}]}],
+    }
+    request = Request(
+        endpoint,
+        data=json.dumps(request_body, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Accept": "application/json", HKU_API_KEY_HEADER: HKU_API_KEY},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=90) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        model_text = extract_hku_text(payload)
+        decoded = parse_json_text(model_text)
+        raw_items = decoded.get("items", []) if isinstance(decoded, dict) else decoded
+        scores = {}
+        for item in raw_items:
+            if not isinstance(item, dict) or not item.get("id"):
+                continue
+            try:
+                score = max(-1.0, min(1.0, float(item.get("score", 0))))
+            except (TypeError, ValueError):
+                continue
+            label = item.get("label") or ("positive" if score > 0.1 else "negative" if score < -0.1 else "neutral")
+            scores[item["id"]] = {"score": round(score, 4), "label": label}
+        numeric_scores = [item["score"] for item in scores.values()]
+        result = {
+            "ok": True,
+            "configured": True,
+            "scores": scores,
+            "metrics": sentiment_metrics(numeric_scores),
+            "processed_count": len(scores),
+            "requested_count": len(limited_articles),
+            "cached": False,
+        }
+        with _sentiment_cache_lock:
+            _sentiment_cache[cache_key] = (now, result)
+        return result
+    except HTTPError as exc:
+        print(f"[sentiment] HKU API returned HTTP {exc.code}")
+        return {"ok": False, "configured": True, "message": f"HKU GenAI API returned HTTP {exc.code}.", "scores": {}, "metrics": sentiment_metrics([])}
+    except Exception as exc:  # noqa: BLE001 - keep provider details out of the browser response
+        print(f"[sentiment] HKU API request failed: {exc}")
+        return {"ok": False, "configured": True, "message": "HKU GenAI sentiment request failed.", "scores": {}, "metrics": sentiment_metrics([])}
 
 
 def parse_date(value: str) -> date:
@@ -260,6 +405,27 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.end_headers()
         self.wfile.write("Demo login required.\n".encode("utf-8"))
+
+    def do_POST(self) -> None:  # noqa: N802
+        if not self.is_authorized():
+            self.request_authentication()
+            return
+        if urlparse(self.path).path != "/api/sentiment":
+            self.send_error(404, "Not Found")
+            return
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+            if content_length > 2_000_000:
+                raise ValueError("request body is too large")
+            payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+            articles = payload.get("articles", [])
+            if not isinstance(articles, list):
+                raise ValueError("articles must be a list")
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            json_response(self, {"ok": False, "message": str(exc), "scores": {}, "metrics": sentiment_metrics([])}, 400)
+            return
+        result = fetch_hku_sentiment(articles)
+        json_response(self, result, 200 if result.get("ok") else 503)
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
