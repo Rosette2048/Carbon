@@ -17,13 +17,25 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from carbon_market_news_store import (
+    article_key as cloud_article_key,
+    database_configured,
+    ensure_schema,
+    load_articles as load_cloud_articles,
+    mark_coverage,
+    missing_ranges,
+    save_articles as save_cloud_articles,
+    save_scores as save_cloud_scores,
+)
+
 
 PORT = int(os.environ.get("PORT", "4174"))
 HOST = os.environ.get("HOST", "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1")
 DEMO_USERNAME = os.environ.get("DEMO_USERNAME", "demo")
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "")
 GDELT_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
-CACHE_TTL_SECONDS = 5 * 60
+GDELT_MAX_RECORDS = 25
+GDELT_MIN_REQUEST_INTERVAL_SECONDS = 6
 SENTIMENT_CACHE_TTL_SECONDS = 15 * 60
 SENTIMENT_BATCH_SIZE = 30
 FORECAST_CACHE_TTL_SECONDS = 15 * 60
@@ -53,6 +65,8 @@ _sentiment_cache: dict[str, tuple[float, dict]] = {}
 _sentiment_cache_lock = threading.Lock()
 _forecast_cache: dict[str, tuple[float, dict]] = {}
 _forecast_cache_lock = threading.Lock()
+_gdelt_request_lock = threading.Lock()
+_gdelt_next_request_at = 0.0
 FACTIVA_PATH = Path(__file__).with_name("carbon_market_factiva_news.json")
 try:
     FACTIVA_PAYLOAD = json.loads(FACTIVA_PATH.read_text(encoding="utf-8"))
@@ -177,16 +191,36 @@ def fetch_hku_batch(articles: list[dict]) -> dict:
 
 
 def fetch_hku_sentiment(articles: list[dict]) -> dict:
+    if not articles:
+        return {"ok": True, "configured": True, "scores": {}, "metrics": sentiment_metrics([])}
+
+    # Reuse scores already persisted with GDELT articles.  Only genuinely new
+    # articles are sent to HKU, so changing the date range does not rescore the
+    # same cloud-stored news repeatedly.
+    persisted_scores = {}
+    for article in articles:
+        if article.get("source_type") != "GDELT" or article.get("score") is None:
+            continue
+        try:
+            score = max(-1.0, min(1.0, float(article.get("score"))))
+        except (TypeError, ValueError):
+            continue
+        persisted_scores[article.get("id", "")] = {
+            "score": round(score, 4),
+            "label": article.get("label") or ("positive" if score > 0.1 else "negative" if score < -0.1 else "neutral"),
+        }
+    uncached_articles = [article for article in articles if article.get("id") not in persisted_scores]
+
     if not HKU_API_KEY:
         return {
             "ok": True,
             "configured": False,
             "message": "HKU GenAI API key is not configured in the server environment.",
-            "scores": {},
-            "metrics": sentiment_metrics([]),
+            "scores": persisted_scores,
+            "metrics": sentiment_metrics([item["score"] for item in persisted_scores.values()]),
+            "processed_count": len(persisted_scores),
+            "requested_count": len(articles),
         }
-    if not articles:
-        return {"ok": True, "configured": True, "scores": {}, "metrics": sentiment_metrics([])}
 
     cache_key = sentiment_cache_key(articles)
     now = time.time()
@@ -197,8 +231,8 @@ def fetch_hku_sentiment(articles: list[dict]) -> dict:
             result["cached"] = True
             return result
 
-    all_scores = {}
-    batches = [articles[index:index + SENTIMENT_BATCH_SIZE] for index in range(0, len(articles), SENTIMENT_BATCH_SIZE)]
+    all_scores = dict(persisted_scores)
+    batches = [uncached_articles[index:index + SENTIMENT_BATCH_SIZE] for index in range(0, len(uncached_articles), SENTIMENT_BATCH_SIZE)]
     for batch in batches:
         batch_result = fetch_hku_batch(batch)
         if not batch_result.get("ok"):
@@ -208,6 +242,8 @@ def fetch_hku_sentiment(articles: list[dict]) -> dict:
                 "message": batch_result.get("message", "HKU GenAI sentiment request failed."),
                 "scores": all_scores,
                 "metrics": sentiment_metrics([item["score"] for item in all_scores.values()]),
+                "processed_count": len(all_scores),
+                "requested_count": len(articles),
             }
         all_scores.update(batch_result.get("scores", {}))
 
@@ -220,8 +256,9 @@ def fetch_hku_sentiment(articles: list[dict]) -> dict:
         "processed_count": len(all_scores),
         "requested_count": len(articles),
         "batch_count": len(batches),
-        "cached": False,
+        "cached": not uncached_articles,
     }
+    save_cloud_scores(articles, all_scores, HKU_API_DEPLOYMENT_ID)
     with _sentiment_cache_lock:
         _sentiment_cache[cache_key] = (now, result)
     return result
@@ -426,22 +463,64 @@ def fetch_gdelt(market_id: str, start: date, end: date, category: str) -> dict:
             "articles": [],
         }
 
-    cache_key = f"{market_id}|{start}|{end}|{category}"
-    now = time.time()
-    with _cache_lock:
-        cached = _cache.get(cache_key)
-        if cached and now - cached[0] < CACHE_TTL_SECONDS:
-            return {**cached[1], "cached": True}
+    if not database_configured() or not ensure_schema():
+        return {
+            "ok": False,
+            "message": "Cloud news database is not configured or unavailable. Set DATABASE_URL in Render.",
+            "articles": [],
+        }
+
+    cached_articles = load_cloud_articles(market_id, start, end, category)
+    gaps = missing_ranges(market_id, start, end, category)
+    if not gaps:
+        return {
+            "ok": True,
+            "market": market_id,
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "category": category,
+            "articles": cached_articles,
+            "count": len(cached_articles),
+            "cached": True,
+            "database": True,
+            "message": "Loaded from cloud news database.",
+        }
+
+    # Fetch only the first uncovered interval.  A normal date change creates
+    # one contiguous gap, and this guard prevents a single browser action from
+    # launching many GDELT requests and triggering another provider limit.
+    request_start, request_end = gaps[0]
+    global _gdelt_next_request_at
+    with _gdelt_request_lock:
+        now = time.time()
+        if now < _gdelt_next_request_at:
+            message = "GDELT cooldown is active. Existing cloud news is being shown."
+            if cached_articles:
+                return {
+                    "ok": True,
+                    "market": market_id,
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                    "category": category,
+                    "articles": cached_articles,
+                    "count": len(cached_articles),
+                    "cached": True,
+                    "database": True,
+                    "stale": True,
+                    "message": message,
+                }
+            return {"ok": False, "rate_limited": True, "message": message, "articles": []}
+        _gdelt_next_request_at = now + GDELT_MIN_REQUEST_INTERVAL_SECONDS
 
     query = MARKET_QUERIES[market_id]
     params = {
         "query": query,
         "mode": "artlist",
         "format": "json",
-        "maxrecords": "75",
+        "maxrecords": str(GDELT_MAX_RECORDS),
         "sort": "datedesc",
-        "startdatetime": start.strftime("%Y%m%d000000"),
-        "enddatetime": end.strftime("%Y%m%d235959"),
+        "startdatetime": request_start.strftime("%Y%m%d000000"),
+        "enddatetime": request_end.strftime("%Y%m%d235959"),
     }
     request_url = f"{GDELT_URL}?{urlencode(params)}"
     request = Request(request_url, headers={"User-Agent": "carbon-market-monitor/0.1"})
@@ -456,15 +535,34 @@ def fetch_gdelt(market_id: str, start: date, end: date, category: str) -> dict:
         source = json.loads(raw)
     except HTTPError as exc:
         if exc.code == 429:
+            with _gdelt_request_lock:
+                _gdelt_next_request_at = time.time() + 60
+            if cached_articles:
+                return {
+                    "ok": True,
+                    "market": market_id,
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                    "category": category,
+                    "articles": cached_articles,
+                    "count": len(cached_articles),
+                    "cached": True,
+                    "database": True,
+                    "stale": True,
+                    "rate_limited": True,
+                    "message": "GDELT is rate-limited. Showing previously saved cloud news.",
+                }
             return {
                 "ok": False,
                 "rate_limited": True,
-                "message": "GDELT is temporarily rate-limiting requests. Wait a few seconds before refreshing.",
+                "message": "GDELT is rate-limited. Previously fetched cloud news will remain available.",
                 "articles": [],
             }
-        return {"ok": False, "message": f"GDELT request failed with HTTP {exc.code}.", "articles": []}
+        message = f"GDELT request failed with HTTP {exc.code}."
+        return {"ok": bool(cached_articles), "message": message, "articles": cached_articles}
     except Exception as exc:  # noqa: BLE001 - return a useful UI error instead of crashing the server
-        return {"ok": False, "message": f"GDELT request failed: {exc}", "articles": []}
+        message = f"GDELT request failed: {exc}"
+        return {"ok": bool(cached_articles), "message": message, "articles": cached_articles}
 
     seen: set[str] = set()
     articles = []
@@ -480,7 +578,8 @@ def fetch_gdelt(market_id: str, start: date, end: date, category: str) -> dict:
             continue
         articles.append(
             {
-                "id": f"{market_id}-{len(articles) + 1}",
+                "id": f"gdelt-{cloud_article_key(market_id, title, url)[:20]}",
+                "article_key": cloud_article_key(market_id, title, url),
                 "market": market_id,
                 "title": title or "Untitled article",
                 "url": url,
@@ -495,19 +594,23 @@ def fetch_gdelt(market_id: str, start: date, end: date, category: str) -> dict:
             }
         )
 
+    save_cloud_articles(articles)
+    mark_coverage(market_id, category, request_start, request_end)
+    stored_articles = load_cloud_articles(market_id, start, end, category)
     result = {
         "ok": True,
         "market": market_id,
         "start": start.isoformat(),
         "end": end.isoformat(),
         "category": category,
-        "articles": articles,
-        "count": len(articles),
+        "articles": stored_articles,
+        "count": len(stored_articles),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "cached": False,
+        "database": True,
+        "fetched_start": request_start.isoformat(),
+        "fetched_end": request_end.isoformat(),
     }
-    with _cache_lock:
-        _cache[cache_key] = (now, result)
     return result
 
 
@@ -548,7 +651,7 @@ def fetch_combined_news(market_id: str, start: date, end: date, category: str) -
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "cached": bool(gdelt_result and gdelt_result.get("cached")),
     }
-    if gdelt_result and not gdelt_result.get("ok"):
+    if gdelt_result and (not gdelt_result.get("ok") or gdelt_result.get("stale") or gdelt_result.get("rate_limited")):
         result["gdelt_message"] = gdelt_result.get("message", "GDELT did not return data.")
         result["rate_limited"] = gdelt_result.get("rate_limited", False)
     if not articles and start < date.today() - timedelta(days=366):

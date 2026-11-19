@@ -3,7 +3,7 @@ services:
     name: carbon-market-monitor
     runtime: python
     plan: free
-    buildCommand: python -m py_compile carbon_market_news_server.py
+    buildCommand: pip install -r requirements.txt && python -m py_compile carbon_market_news_server.py carbon_market_news_store.py
     startCommand: python carbon_market_news_server.py
     healthCheckPath: /healthz
     envVars:
@@ -22,4 +22,6 @@ services:
       - key: HKU_API_KEY_HEADER
         value: api-key
       - key: HKU_API_KEY
+        sync: false
+      - key: DATABASE_URL
         sync: false

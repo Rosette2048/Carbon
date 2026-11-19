@@ -457,7 +457,9 @@
               renderForecastSummary(null, market);
             }
           }
-          if (data.gdelt_message && data.factiva_count) {
+          if (data.gdelt_message && data.rate_limited) {
+            $('statusText').textContent = `F${data.factiva_count ?? 0} · GDELT rate-limited · cloud news shown · ${sentiment.configured && sentiment.ok ? 'HKU ready' : 'HKU pending'}${forecast?.ok ? ' · AI ready' : ''}`;
+          } else if (data.gdelt_message && data.factiva_count) {
             $('statusText').textContent = `F${data.factiva_count} · GDELT unavailable · ${sentiment.configured && sentiment.ok ? 'HKU ready' : 'HKU pending'}${forecast?.ok ? ' · AI ready' : ''}`;
           } else {
             $('statusText').textContent = data.ok
@@ -645,7 +647,6 @@
       $('previousMarket').addEventListener('click', () => { state.currentIndex = (state.currentIndex - 1 + state.selected.length) % state.selected.length; normalizeDates(); render(); });
       $('nextMarket').addEventListener('click', () => { state.currentIndex = (state.currentIndex + 1) % state.selected.length; normalizeDates(); render(); });
       $('refreshButton').addEventListener('click', () => { $('statusText').textContent = 'Refreshing…'; render(); });
-      setInterval(loadNews, 15 * 60 * 1000);
 
       normalizeDates(true);
       setupNewsFilters();
