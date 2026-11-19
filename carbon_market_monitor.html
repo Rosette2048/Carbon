@@ -415,13 +415,14 @@
         }
       }
 
-      async function loadNews() {
+      async function loadNews(forceGdelt = false) {
         const requestId = ++state.newsRequestId;
         const market = currentMarket();
         $('newsCount').textContent = 'Loading…';
         renderNewsState('Loading news', `Querying Factiva and GDELT for ${market.name}.`);
         renderSentimentSummary({ loading: true, metrics: {} });
         const params = new URLSearchParams({ market: market.id, start: state.start, end: state.end, category: state.category });
+        if (forceGdelt) params.set('refresh', '1');
         try {
           const response = await fetch(`/api/news?${params.toString()}`);
           const data = await response.json();
@@ -622,7 +623,7 @@
         $('observationText').textContent = `${rows.length.toLocaleString()} observations${forecastRows.length ? ` · ${forecastRows.length}-day AI forecast` : ''}`;
       }
 
-      function render() {
+      function render(forceGdelt = false) {
         const market = currentMarket();
         const rows = market.rows.filter((row) => row.date >= state.start && row.date <= state.end);
         state.forecast = null;
@@ -639,14 +640,14 @@
         $('nextMarket').disabled = state.selected.length < 2;
         drawChart(market, rows, state.forecast);
         renderMarketOptions();
-        loadNews();
+        loadNews(forceGdelt);
       }
 
       $('startDate').addEventListener('change', (event) => { state.start = event.target.value; if (state.start > state.end) state.end = state.start; normalizeDates(); render(); });
       $('endDate').addEventListener('change', (event) => { state.end = event.target.value; if (state.end < state.start) state.start = state.end; normalizeDates(); render(); });
       $('previousMarket').addEventListener('click', () => { state.currentIndex = (state.currentIndex - 1 + state.selected.length) % state.selected.length; normalizeDates(); render(); });
       $('nextMarket').addEventListener('click', () => { state.currentIndex = (state.currentIndex + 1) % state.selected.length; normalizeDates(); render(); });
-      $('refreshButton').addEventListener('click', () => { $('statusText').textContent = 'Refreshing…'; render(); });
+      $('refreshButton').addEventListener('click', () => { $('statusText').textContent = 'Refreshing…'; render(true); });
 
       normalizeDates(true);
       setupNewsFilters();

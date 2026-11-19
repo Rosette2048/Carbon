@@ -34,7 +34,7 @@ HOST = os.environ.get("HOST", "0.0.0.0" if os.environ.get("PORT") else "127.0.0.
 DEMO_USERNAME = os.environ.get("DEMO_USERNAME", "demo")
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "")
 GDELT_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
-GDELT_MAX_RECORDS = 25
+GDELT_MAX_RECORDS = 75
 GDELT_MIN_REQUEST_INTERVAL_SECONDS = 6
 SENTIMENT_CACHE_TTL_SECONDS = 15 * 60
 SENTIMENT_BATCH_SIZE = 30
@@ -232,6 +232,7 @@ def fetch_hku_sentiment(articles: list[dict]) -> dict:
             return result
 
     all_scores = dict(persisted_scores)
+    new_scores = {}
     batches = [uncached_articles[index:index + SENTIMENT_BATCH_SIZE] for index in range(0, len(uncached_articles), SENTIMENT_BATCH_SIZE)]
     for batch in batches:
         batch_result = fetch_hku_batch(batch)
@@ -245,7 +246,9 @@ def fetch_hku_sentiment(articles: list[dict]) -> dict:
                 "processed_count": len(all_scores),
                 "requested_count": len(articles),
             }
-        all_scores.update(batch_result.get("scores", {}))
+        batch_scores = batch_result.get("scores", {})
+        new_scores.update(batch_scores)
+        all_scores.update(batch_scores)
 
     numeric_scores = [item["score"] for item in all_scores.values()]
     result = {
@@ -258,7 +261,9 @@ def fetch_hku_sentiment(articles: list[dict]) -> dict:
         "batch_count": len(batches),
         "cached": not uncached_articles,
     }
-    save_cloud_scores(articles, all_scores, HKU_API_DEPLOYMENT_ID)
+    # Persist only newly produced scores. Reused scores keep their original
+    # score_updated_at timestamp when the user changes the date range.
+    save_cloud_scores(uncached_articles, new_scores, HKU_API_DEPLOYMENT_ID)
     with _sentiment_cache_lock:
         _sentiment_cache[cache_key] = (now, result)
     return result
@@ -451,7 +456,7 @@ def fetch_factiva(market_id: str, start: date, end: date, category: str) -> list
     return articles
 
 
-def fetch_gdelt(market_id: str, start: date, end: date, category: str) -> dict:
+def fetch_gdelt(market_id: str, start: date, end: date, category: str, force: bool = False) -> dict:
     if market_id not in MARKET_QUERIES:
         return {"ok": False, "message": "Unknown market."}
 
@@ -471,7 +476,7 @@ def fetch_gdelt(market_id: str, start: date, end: date, category: str) -> dict:
         }
 
     cached_articles = load_cloud_articles(market_id, start, end, category)
-    gaps = missing_ranges(market_id, start, end, category)
+    gaps = [(start, end)] if force else missing_ranges(market_id, start, end, category)
     if not gaps:
         return {
             "ok": True,
@@ -626,13 +631,13 @@ def merge_articles(factiva_articles: list[dict], gdelt_articles: list[dict]) -> 
     return sorted(merged, key=lambda article: article.get("published_at", ""), reverse=True)
 
 
-def fetch_combined_news(market_id: str, start: date, end: date, category: str) -> dict:
+def fetch_combined_news(market_id: str, start: date, end: date, category: str, force_gdelt: bool = False) -> dict:
     factiva_articles = fetch_factiva(market_id, start, end, category)
     gdelt_result = None
     recent_start = max(start, date.today() - timedelta(days=366))
     recent_end = min(end, date.today())
     if recent_start <= recent_end:
-        gdelt_result = fetch_gdelt(market_id, recent_start, recent_end, category)
+        gdelt_result = fetch_gdelt(market_id, recent_start, recent_end, category, force=force_gdelt)
 
     gdelt_articles = gdelt_result.get("articles", []) if gdelt_result else []
     articles = merge_articles(factiva_articles, gdelt_articles)
@@ -732,12 +737,13 @@ class Handler(SimpleHTTPRequestHandler):
                 start = parse_date(query.get("start", [""])[0])
                 end = parse_date(query.get("end", [""])[0])
                 category = query.get("category", ["all"])[0].lower()
+                force_gdelt = query.get("refresh", ["0"])[0] == "1"
                 if start > end:
                     raise ValueError("start date must not be after end date")
             except ValueError as exc:
                 json_response(self, {"ok": False, "message": str(exc), "articles": []}, 400)
                 return
-            result = fetch_combined_news(market, start, end, category)
+            result = fetch_combined_news(market, start, end, category, force_gdelt=force_gdelt)
             json_response(self, result, 200 if result.get("ok") else 422)
             return
         if parsed.path not in PUBLIC_FILES:
