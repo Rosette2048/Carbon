@@ -94,6 +94,12 @@
     #priceChart .price-line { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
     #priceChart .price-point { fill: var(--surface); stroke: var(--accent); stroke-width: 2.5; cursor: pointer; }
     #priceChart .price-point:hover, #priceChart .price-point:focus { fill: var(--accent); outline: none; }
+    #priceChart .forecast-line { fill: none; stroke: #c56d58; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 7 5; }
+    #priceChart .forecast-band { fill: rgba(197,109,88,.12); stroke: none; }
+    #priceChart .forecast-point { fill: var(--surface); stroke: #c56d58; stroke-width: 2.3; cursor: pointer; }
+    #priceChart .forecast-point:hover, #priceChart .forecast-point:focus { fill: #c56d58; outline: none; }
+    #priceChart .forecast-divider { stroke: #c56d58; stroke-width: 1.2; stroke-dasharray: 4 5; }
+    #priceChart .forecast-label { fill: #a95643; font-size: 9px; font-weight: 800; }
     .tooltip { position: absolute; z-index: 3; display: none; min-width: 150px; padding: 8px 9px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: 0 7px 18px rgba(20,34,28,.13); font-size: 10px; line-height: 1.45; pointer-events: none; }
     .tooltip strong { display: block; font-size: 12px; }
     .tooltip span { color: var(--muted); }
@@ -134,6 +140,16 @@
     .metric strong { display: block; margin-top: 5px; color: var(--ink); font-size: 16px; letter-spacing: -.03em; }
     .metric .bar { height: 3px; margin-top: 6px; border-radius: 999px; background: var(--line); }
     .metric .bar i { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent); }
+    .forecast-card { display: grid; grid-template-columns: minmax(190px, .9fr) minmax(0, 1.6fr); gap: 12px; align-items: center; margin-bottom: 9px; padding: 10px 11px; border: 1px solid rgba(197,109,88,.28); border-radius: var(--radius); background: linear-gradient(110deg, rgba(253,244,240,.92), var(--surface-2)); }
+    .forecast-card[hidden] { display: none; }
+    .forecast-kicker { color: #a95643; font-size: 9px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+    .forecast-value { display: flex; align-items: baseline; gap: 7px; margin-top: 4px; }
+    .forecast-value strong { color: #a95643; font-size: 23px; letter-spacing: -.05em; }
+    .forecast-value span { color: var(--muted); font-size: 9px; }
+    .forecast-meta { display: flex; flex-wrap: wrap; gap: 5px 13px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .forecast-meta strong { color: var(--ink); }
+    .forecast-reason { margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.35; }
+    .forecast-disclaimer { margin-top: 5px; color: #a95643; font-size: 8px; font-weight: 700; }
     .summary-note { margin-top: 9px; color: var(--muted); font-size: 10px; }
     .market-nav { justify-content: center; gap: 16px; min-height: 43px; border-top: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 10px; }
     .nav-button { border: 0; background: transparent; color: var(--accent); font-size: 10px; font-weight: 800; }
@@ -212,6 +228,17 @@
 
       <section class="panel summary-panel">
         <div class="summary-heading"><div class="section-title"><span class="tiny-mark"></span>Sentiment summary / expected carbon-price impact</div><span class="interpretation" id="sentimentInterpretation">Waiting for news data</span></div>
+        <div class="forecast-card" id="forecastCard" hidden>
+          <div>
+            <div class="forecast-kicker">AI forecast · 14-day horizon</div>
+            <div class="forecast-value"><strong id="forecastValue">—</strong><span id="forecastCurrency">per tCO₂e</span></div>
+            <div class="forecast-disclaimer">AI forecast for demonstration purposes only</div>
+          </div>
+          <div>
+            <div class="forecast-meta"><span>Expected change <strong id="forecastChange">—</strong></span><span>Direction <strong id="forecastDirection">—</strong></span><span>Confidence <strong id="forecastConfidence">—</strong></span><span>Forecast window <strong id="forecastWindow">—</strong></span></div>
+            <p class="forecast-reason" id="forecastReason">Waiting for the AI forecast.</p>
+          </div>
+        </div>
         <div class="metrics">
           <div class="metric" data-metric="median_score"><span class="summary-label">median_score</span><strong>—</strong><div class="bar"><i></i></div></div>
           <div class="metric" data-metric="positive_share"><span class="summary-label">positive_share</span><strong>—</strong><div class="bar"><i></i></div></div>
@@ -233,7 +260,7 @@
       const payload = window.CARBON_PRICE_DATA;
       const markets = payload.markets;
       const byId = new Map(markets.map((market) => [market.id, market]));
-      const state = { selected: markets.map((market) => market.id), currentIndex: 0, start: '', end: '', category: 'all', newsRequestId: 0 };
+      const state = { selected: markets.map((market) => market.id), currentIndex: 0, start: '', end: '', category: 'all', newsRequestId: 0, forecast: null };
       const $ = (id) => document.getElementById(id);
 
       const formatPrice = (market, value) => `${market.symbol}${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -368,6 +395,22 @@
         }));
       }
 
+      async function loadForecast(market, rows, articles, sentiment) {
+        if (!sentiment?.configured || !sentiment?.ok || !(sentiment.processed_count > 0)) return null;
+        const payload = buildForecastPayload(rows, articles, sentiment);
+        if (!payload.prices.length || !payload.daily_sentiment.length) return null;
+        try {
+          const response = await fetch('/api/forecast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          return await response.json();
+        } catch (error) {
+          return { ok: false, configured: true, message: 'HKU GenAI forecast request failed.', forecast: [] };
+        }
+      }
+
       async function loadNews() {
         const requestId = ++state.newsRequestId;
         const market = currentMarket();
@@ -396,11 +439,25 @@
             renderNews(data, sentiment);
           }
           renderSentimentSummary(sentiment);
+          let forecast = null;
+          if (data.ok && data.articles.length) {
+            const rows = market.rows.filter((row) => row.date >= state.start && row.date <= state.end);
+            forecast = await loadForecast(market, rows, data.articles, sentiment);
+            if (requestId !== state.newsRequestId) return;
+            if (forecast?.ok && forecast.forecast?.length) {
+              state.forecast = forecast;
+              drawChart(market, rows, forecast);
+              renderForecastSummary(forecast, market);
+            } else {
+              state.forecast = null;
+              renderForecastSummary(null, market);
+            }
+          }
           if (data.gdelt_message && data.factiva_count) {
-            $('statusText').textContent = `Factiva loaded · GDELT unavailable · ${sentiment.configured && sentiment.ok ? 'sentiment ready' : 'sentiment pending'}`;
+            $('statusText').textContent = `Factiva loaded · GDELT unavailable · ${sentiment.configured && sentiment.ok ? 'sentiment ready' : 'sentiment pending'}${forecast?.ok ? ' · forecast ready' : ''}`;
           } else {
             $('statusText').textContent = data.ok
-              ? `Factiva ${data.factiva_count ?? 0} · GDELT ${data.gdelt_count ?? 0} · ${sentiment.configured && sentiment.ok ? 'sentiment ready' : 'sentiment pending'}`
+              ? `Factiva ${data.factiva_count ?? 0} · GDELT ${data.gdelt_count ?? 0} · ${sentiment.configured && sentiment.ok ? 'sentiment ready' : 'sentiment pending'}${forecast?.ok ? ' · forecast ready' : ''}`
               : 'News sources returned no data';
           }
         } catch (error) {
@@ -439,7 +496,56 @@
         $('endDate').value = state.end;
       }
 
-      function drawChart(market, rows) {
+      function medianValue(values) {
+        if (!values.length) return 0;
+        const sorted = [...values].sort((a, b) => a - b);
+        const middle = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+      }
+
+      function buildForecastPayload(rows, articles, sentiment) {
+        const daily = new Map();
+        articles.forEach((article) => {
+          const scoreInfo = sentiment?.scores?.[article.id];
+          const day = String(article.published_at || '').slice(0, 10);
+          if (!scoreInfo || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+          if (!daily.has(day)) daily.set(day, []);
+          daily.get(day).push(Number(scoreInfo.score));
+        });
+        const dailySentiment = [...daily.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([day, scores]) => ({
+          date: day,
+          median_score: medianValue(scores),
+          positive_share: scores.filter((score) => score > 0.1).length / scores.length,
+          neutral_share: scores.filter((score) => score >= -0.1 && score <= 0.1).length / scores.length,
+          negative_share: scores.filter((score) => score < -0.1).length / scores.length,
+          news_count: scores.length,
+        }));
+        return {
+          market: currentMarket().id,
+          prices: rows.slice(-60).map((row) => ({ date: row.date, price: row.price })),
+          daily_sentiment: dailySentiment.slice(-90),
+          horizon_days: 14,
+        };
+      }
+
+      function renderForecastSummary(forecast, market) {
+        const card = $('forecastCard');
+        if (!forecast?.ok || !forecast.forecast?.length) {
+          card.hidden = true;
+          return;
+        }
+        card.hidden = false;
+        $('forecastValue').textContent = formatPrice(market, forecast.endpoint_price);
+        $('forecastCurrency').textContent = `per tCO₂e · ${market.currency}`;
+        const change = Number(forecast.expected_change_pct || 0);
+        $('forecastChange').textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+        $('forecastDirection').textContent = forecast.direction || 'flat';
+        $('forecastConfidence').textContent = `${(Number(forecast.confidence || 0) * 100).toFixed(0)}%`;
+        $('forecastWindow').textContent = `${formatDate(forecast.forecast_start)} → ${formatDate(forecast.forecast_end)}`;
+        $('forecastReason').textContent = forecast.reason || 'AI forecast based on recent prices and news sentiment.';
+      }
+
+      function drawChart(market, rows, forecast = null) {
         const svg = $('priceChart');
         const empty = $('chartEmpty');
         svg.innerHTML = '';
@@ -449,18 +555,20 @@
           $('priceChange').textContent = 'No data in this date range';
           $('priceChange').className = 'price-change neutral';
           $('observationText').textContent = '0 observations';
+          renderForecastSummary(null, market);
           return;
         }
         empty.hidden = true;
         const W = 800, H = 300, left = 54, right = 16, top = 16, bottom = 38;
         const plotW = W - left - right, plotH = H - top - bottom;
-        const values = rows.map((row) => row.price);
+        const forecastRows = forecast?.forecast || [];
+        const values = [...rows.map((row) => row.price), ...forecastRows.flatMap((point) => [point.predicted_price, point.lower_bound, point.upper_bound])];
         const min = Math.min(...values), max = Math.max(...values);
         const spread = max - min || Math.max(1, max * .04);
         const yMin = min - spread * .08, yMax = max + spread * .08;
-        const startMs = Date.parse(`${rows[0].date}T00:00:00Z`), endMs = Date.parse(`${rows.at(-1).date}T00:00:00Z`);
+        const startMs = Date.parse(`${rows[0].date}T00:00:00Z`), endDate = forecastRows.at(-1)?.date || rows.at(-1).date, endMs = Date.parse(`${endDate}T00:00:00Z`);
         const xFor = (row) => left + (endMs === startMs ? plotW / 2 : (Date.parse(`${row.date}T00:00:00Z`) - startMs) / (endMs - startMs) * plotW);
-        const yFor = (row) => top + (yMax - row.price) / (yMax - yMin) * plotH;
+        const yFor = (row, value = row.price ?? row.predicted_price) => top + (yMax - value) / (yMax - yMin) * plotH;
         const maxPoints = 180;
         const step = Math.max(1, Math.ceil(rows.length / maxPoints));
         const plotted = rows.filter((_, index) => index % step === 0 || index === rows.length - 1);
@@ -470,20 +578,28 @@
           const value = yMax - (yMax - yMin) * index / 4;
           return `<line class="grid-line" x1="${left}" y1="${y}" x2="${W - right}" y2="${y}" /><text class="axis-label" x="4" y="${y + 4}">${esc(formatPrice(market, value))}</text>`;
         }).join('');
-        const labels = [0, .33, .66, 1].map((ratio) => {
-          const index = Math.min(rows.length - 1, Math.round((rows.length - 1) * ratio));
-          const row = rows[index];
-          return `<text class="axis-label" x="${xFor(row)}" y="${H - 10}" text-anchor="${ratio === 0 ? 'start' : ratio === 1 ? 'end' : 'middle'}">${esc(formatDate(row.date))}</text>`;
+        const labelRows = forecastRows.length
+          ? [rows[0], rows[Math.round((rows.length - 1) * .33)], rows[Math.round((rows.length - 1) * .66)], { date: forecastRows.at(-1).date }]
+          : [0, .33, .66, 1].map((ratio) => rows[Math.min(rows.length - 1, Math.round((rows.length - 1) * ratio))]);
+        const labels = labelRows.filter((row, index, list) => list.findIndex((item) => item.date === row.date) === index).map((row, index, list) => {
+          const anchor = index === 0 ? 'start' : index === list.length - 1 ? 'end' : 'middle';
+          return `<text class="axis-label" x="${xFor(row)}" y="${H - 10}" text-anchor="${anchor}">${esc(formatDate(row.date))}</text>`;
         }).join('');
         const line = plotted.map((row, index) => `${index ? 'L' : 'M'} ${xFor(row).toFixed(2)} ${yFor(row).toFixed(2)}`).join(' ');
         const points = plotted.map((row) => `<circle class="price-point" tabindex="0" cx="${xFor(row).toFixed(2)}" cy="${yFor(row).toFixed(2)}" r="4" data-date="${row.date}" data-price="${row.price}" />`).join('');
-        svg.innerHTML = `${grid}${labels}<path class="price-line" d="${line}" />${points}`;
-        svg.querySelectorAll('.price-point').forEach((point) => {
+        const forecastLine = forecastRows.length ? [rows.at(-1), ...forecastRows].map((row, index) => `${index ? 'L' : 'M'} ${xFor(row).toFixed(2)} ${yFor(row).toFixed(2)}`).join(' ') : '';
+        const forecastBand = forecastRows.length ? `${forecastRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.upper_bound).toFixed(2)}`).join(' ')} ${[...forecastRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.lower_bound).toFixed(2)}`).join(' ')} Z` : '';
+        const forecastPoints = forecastRows.map((point) => `<circle class="forecast-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point).toFixed(2)}" r="4" data-date="${point.date}" data-price="${point.predicted_price}" data-lower="${point.lower_bound}" data-upper="${point.upper_bound}" />`).join('');
+        const divider = forecastRows.length ? `<line class="forecast-divider" x1="${xFor(rows.at(-1))}" y1="${top}" x2="${xFor(rows.at(-1))}" y2="${top + plotH}" /><text class="forecast-label" x="${xFor(rows.at(-1)) + 5}" y="${top + 12}">Forecast begins</text>` : '';
+        svg.innerHTML = `${grid}${labels}${forecastBand ? `<path class="forecast-band" d="${forecastBand}" />` : ''}${divider}<path class="price-line" d="${line}" />${forecastLine ? `<path class="forecast-line" d="${forecastLine}" />` : ''}${points}${forecastPoints}`;
+        svg.querySelectorAll('.price-point, .forecast-point').forEach((point) => {
           const show = () => {
             const rect = $('chartWrap').getBoundingClientRect();
             const pointRect = point.getBoundingClientRect();
             const price = Number(point.dataset.price);
-            $('chartTooltip').innerHTML = `<strong>${esc(formatPrice(market, price))}</strong><span>${esc(formatDate(point.dataset.date))}<br />${market.name} · secondary market</span>`;
+            const isForecast = point.classList.contains('forecast-point');
+            const range = isForecast ? `<br />Range: ${esc(formatPrice(market, Number(point.dataset.lower)))}–${esc(formatPrice(market, Number(point.dataset.upper)))}` : '';
+            $('chartTooltip').innerHTML = `<strong>${esc(formatPrice(market, price))}</strong><span>${esc(formatDate(point.dataset.date))}<br />${market.name} · ${isForecast ? 'AI forecast' : 'secondary market'}${range}</span>`;
             $('chartTooltip').style.left = `${Math.max(8, Math.min(rect.width - 165, pointRect.left - rect.left - 75))}px`;
             $('chartTooltip').style.top = `${Math.max(8, pointRect.top - rect.top - 74)}px`;
             $('chartTooltip').style.display = 'block';
@@ -497,12 +613,14 @@
         $('latestPrice').textContent = formatPrice(market, last);
         $('priceChange').textContent = `${delta >= 0 ? '+' : ''}${formatPrice(market, delta)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%) over selected range`;
         $('priceChange').className = `price-change ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral'}`;
-        $('observationText').textContent = `${rows.length.toLocaleString()} observations`;
+        $('observationText').textContent = `${rows.length.toLocaleString()} observations${forecastRows.length ? ` · ${forecastRows.length}-day AI forecast` : ''}`;
       }
 
       function render() {
         const market = currentMarket();
         const rows = market.rows.filter((row) => row.date >= state.start && row.date <= state.end);
+        state.forecast = null;
+        renderForecastSummary(null, market);
         $('marketSummary').textContent = `${state.selected.length} selected`;
         $('marketTitle').textContent = market.name;
         $('priceSubtitle').textContent = market.displayName;
@@ -513,7 +631,7 @@
         $('priceUnit').textContent = `per tCO₂e · ${market.currency}`;
         $('previousMarket').disabled = state.selected.length < 2;
         $('nextMarket').disabled = state.selected.length < 2;
-        drawChart(market, rows);
+        drawChart(market, rows, state.forecast);
         renderMarketOptions();
         loadNews();
       }

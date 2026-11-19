@@ -25,6 +25,9 @@ DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "")
 GDELT_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 CACHE_TTL_SECONDS = 5 * 60
 SENTIMENT_CACHE_TTL_SECONDS = 15 * 60
+SENTIMENT_BATCH_SIZE = 30
+FORECAST_CACHE_TTL_SECONDS = 15 * 60
+FORECAST_HORIZON_DAYS = 14
 HKU_API_BASE_URL = os.environ.get("HKU_API_BASE_URL", "https://api.hku.hk")
 HKU_API_DEPLOYMENT_ID = os.environ.get("HKU_API_DEPLOYMENT_ID", "claude-haiku-4.5")
 HKU_API_KEY = os.environ.get("HKU_API_KEY", "")
@@ -48,6 +51,8 @@ _cache: dict[str, tuple[float, dict]] = {}
 _cache_lock = threading.Lock()
 _sentiment_cache: dict[str, tuple[float, dict]] = {}
 _sentiment_cache_lock = threading.Lock()
+_forecast_cache: dict[str, tuple[float, dict]] = {}
+_forecast_cache_lock = threading.Lock()
 FACTIVA_PATH = Path(__file__).with_name("carbon_market_factiva_news.json")
 try:
     FACTIVA_PAYLOAD = json.loads(FACTIVA_PATH.read_text(encoding="utf-8"))
@@ -121,30 +126,9 @@ def extract_hku_text(payload: dict) -> str:
     return "\n".join(block.get("text", "") for block in content if isinstance(block, dict) and block.get("text"))
 
 
-def fetch_hku_sentiment(articles: list[dict]) -> dict:
-    if not HKU_API_KEY:
-        return {
-            "ok": True,
-            "configured": False,
-            "message": "HKU GenAI API key is not configured in the server environment.",
-            "scores": {},
-            "metrics": sentiment_metrics([]),
-        }
-    if not articles:
-        return {"ok": True, "configured": True, "scores": {}, "metrics": sentiment_metrics([])}
-
-    limited_articles = articles[:40]
-    cache_key = sentiment_cache_key(limited_articles)
-    now = time.time()
-    with _sentiment_cache_lock:
-        cached = _sentiment_cache.get(cache_key)
-        if cached and now - cached[0] < SENTIMENT_CACHE_TTL_SECONDS:
-            result = dict(cached[1])
-            result["cached"] = True
-            return result
-
+def fetch_hku_batch(articles: list[dict]) -> dict:
     items = []
-    for article in limited_articles:
+    for article in articles:
         title = (article.get("title") or "").strip()
         summary = (article.get("summary") or "").strip()
         items.append({"id": article.get("id", ""), "title": title[:500], "summary": summary[:800]})
@@ -183,25 +167,215 @@ def fetch_hku_sentiment(articles: list[dict]) -> dict:
                 continue
             label = item.get("label") or ("positive" if score > 0.1 else "negative" if score < -0.1 else "neutral")
             scores[item["id"]] = {"score": round(score, 4), "label": label}
-        numeric_scores = [item["score"] for item in scores.values()]
+        return {"ok": True, "configured": True, "scores": scores}
+    except HTTPError as exc:
+        print(f"[sentiment] HKU API returned HTTP {exc.code}")
+        return {"ok": False, "configured": True, "message": f"HKU GenAI API returned HTTP {exc.code}.", "scores": {}}
+    except Exception as exc:  # noqa: BLE001 - keep provider details out of the browser response
+        print(f"[sentiment] HKU API request failed: {exc}")
+        return {"ok": False, "configured": True, "message": "HKU GenAI sentiment request failed.", "scores": {}}
+
+
+def fetch_hku_sentiment(articles: list[dict]) -> dict:
+    if not HKU_API_KEY:
+        return {
+            "ok": True,
+            "configured": False,
+            "message": "HKU GenAI API key is not configured in the server environment.",
+            "scores": {},
+            "metrics": sentiment_metrics([]),
+        }
+    if not articles:
+        return {"ok": True, "configured": True, "scores": {}, "metrics": sentiment_metrics([])}
+
+    cache_key = sentiment_cache_key(articles)
+    now = time.time()
+    with _sentiment_cache_lock:
+        cached = _sentiment_cache.get(cache_key)
+        if cached and now - cached[0] < SENTIMENT_CACHE_TTL_SECONDS:
+            result = dict(cached[1])
+            result["cached"] = True
+            return result
+
+    all_scores = {}
+    batches = [articles[index:index + SENTIMENT_BATCH_SIZE] for index in range(0, len(articles), SENTIMENT_BATCH_SIZE)]
+    for batch in batches:
+        batch_result = fetch_hku_batch(batch)
+        if not batch_result.get("ok"):
+            return {
+                "ok": False,
+                "configured": True,
+                "message": batch_result.get("message", "HKU GenAI sentiment request failed."),
+                "scores": all_scores,
+                "metrics": sentiment_metrics([item["score"] for item in all_scores.values()]),
+            }
+        all_scores.update(batch_result.get("scores", {}))
+
+    numeric_scores = [item["score"] for item in all_scores.values()]
+    result = {
+        "ok": True,
+        "configured": True,
+        "scores": all_scores,
+        "metrics": sentiment_metrics(numeric_scores),
+        "processed_count": len(all_scores),
+        "requested_count": len(articles),
+        "batch_count": len(batches),
+        "cached": False,
+    }
+    with _sentiment_cache_lock:
+        _sentiment_cache[cache_key] = (now, result)
+    return result
+
+
+def forecast_cache_key(payload: dict) -> str:
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def fetch_hku_forecast(payload: dict) -> dict:
+    if not HKU_API_KEY:
+        return {
+            "ok": True,
+            "configured": False,
+            "message": "HKU GenAI API key is not configured in the server environment.",
+            "forecast": [],
+        }
+
+    prices = payload.get("prices", [])
+    daily_sentiment = payload.get("daily_sentiment", [])
+    if not isinstance(prices, list) or not prices:
+        return {"ok": False, "configured": True, "message": "At least one price observation is required.", "forecast": []}
+    if not isinstance(daily_sentiment, list):
+        daily_sentiment = []
+
+    try:
+        clean_prices = [
+            {"date": str(item["date"]), "price": float(item["price"])}
+            for item in prices[-60:]
+            if item.get("date") and float(item.get("price", 0)) > 0
+        ]
+        last_date = date.fromisoformat(clean_prices[-1]["date"])
+        last_price = clean_prices[-1]["price"]
+    except (IndexError, KeyError, TypeError, ValueError):
+        return {"ok": False, "configured": True, "message": "Price observations are not valid.", "forecast": []}
+
+    clean_sentiment = []
+    for item in daily_sentiment[-90:]:
+        try:
+            clean_sentiment.append(
+                {
+                    "date": str(item["date"]),
+                    "median_score": max(-1.0, min(1.0, float(item.get("median_score", 0)))),
+                    "positive_share": max(0.0, min(1.0, float(item.get("positive_share", 0)))),
+                    "neutral_share": max(0.0, min(1.0, float(item.get("neutral_share", 0)))),
+                    "negative_share": max(0.0, min(1.0, float(item.get("negative_share", 0)))),
+                    "news_count": int(item.get("news_count", 0)),
+                }
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+
+    request_data = {
+        "last_actual_date": last_date.isoformat(),
+        "last_actual_price": round(last_price, 6),
+        "price_history": clean_prices,
+        "daily_news_sentiment": clean_sentiment,
+        "forecast_horizon_days": FORECAST_HORIZON_DAYS,
+    }
+    cache_key = forecast_cache_key(request_data)
+    now = time.time()
+    with _forecast_cache_lock:
+        cached = _forecast_cache.get(cache_key)
+        if cached and now - cached[0] < FORECAST_CACHE_TTL_SECONDS:
+            result = dict(cached[1])
+            result["cached"] = True
+            return result
+
+    prompt = (
+        "You are an AI forecasting assistant for a carbon allowance market dashboard. "
+        "Use the supplied historical secondary carbon prices and daily news sentiment. "
+        "Forecast the next 14 calendar days after the last actual date. "
+        "This is a demonstration scenario, not financial advice. Do not invent historical observations. "
+        "Return JSON only, with exactly this shape: "
+        "{\"forecast\":[{\"date\":\"YYYY-MM-DD\",\"predicted_price\":0.0,\"lower_bound\":0.0,\"upper_bound\":0.0}],"
+        "\"endpoint_price\":0.0,\"expected_change_pct\":0.0,\"direction\":\"up|down|flat\","
+        "\"confidence\":0.0,\"reason\":\"short explanation\"}. "
+        "Return exactly 14 forecast points, one for each day. Keep all prices positive, keep lower_bound <= predicted_price <= upper_bound, "
+        "and keep the endpoint reasonably consistent with recent price movement. Confidence must be between 0 and 1.\n\n"
+        + json.dumps(request_data, ensure_ascii=False)
+    )
+    endpoint = f"{HKU_API_BASE_URL.rstrip('/')}/claude/model/{HKU_API_DEPLOYMENT_ID}/converse"
+    request_body = {
+        "inferenceConfig": {"maxTokens": 1800, "temperature": 0},
+        "messages": [{"role": "user", "content": [{"text": prompt}]}],
+    }
+    request = Request(
+        endpoint,
+        data=json.dumps(request_body, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Accept": "application/json", HKU_API_KEY_HEADER: HKU_API_KEY},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=90) as response:
+            response_payload = json.loads(response.read().decode("utf-8"))
+        decoded = parse_json_text(extract_hku_text(response_payload))
+        raw_forecast = decoded.get("forecast", []) if isinstance(decoded, dict) else []
+        expected_end = last_date + timedelta(days=FORECAST_HORIZON_DAYS)
+        forecast = []
+        for item in raw_forecast:
+            if not isinstance(item, dict):
+                continue
+            try:
+                point_date = date.fromisoformat(str(item["date"]))
+                predicted = float(item["predicted_price"])
+                lower = float(item.get("lower_bound", predicted))
+                upper = float(item.get("upper_bound", predicted))
+            except (KeyError, TypeError, ValueError):
+                continue
+            if point_date <= last_date or point_date > expected_end or predicted <= 0:
+                continue
+            lower, upper = sorted((max(0.0, lower), max(0.0, upper)))
+            forecast.append(
+                {
+                    "date": point_date.isoformat(),
+                    "predicted_price": round(predicted, 4),
+                    "lower_bound": round(min(lower, predicted), 4),
+                    "upper_bound": round(max(upper, predicted), 4),
+                }
+            )
+        forecast = sorted({item["date"]: item for item in forecast}.values(), key=lambda item: item["date"])
+        if not forecast:
+            raise ValueError("HKU returned no valid forecast points")
+        endpoint_price = float(decoded.get("endpoint_price", forecast[-1]["predicted_price"]))
+        expected_change_pct = float(decoded.get("expected_change_pct", (endpoint_price / last_price - 1) * 100))
+        direction = str(decoded.get("direction", "flat")).lower()
+        if direction not in {"up", "down", "flat"}:
+            direction = "up" if expected_change_pct > 0.1 else "down" if expected_change_pct < -0.1 else "flat"
+        confidence = max(0.0, min(1.0, float(decoded.get("confidence", 0.5))))
         result = {
             "ok": True,
             "configured": True,
-            "scores": scores,
-            "metrics": sentiment_metrics(numeric_scores),
-            "processed_count": len(scores),
-            "requested_count": len(limited_articles),
+            "model": HKU_API_DEPLOYMENT_ID,
+            "forecast": forecast,
+            "last_actual_date": last_date.isoformat(),
+            "last_actual_price": round(last_price, 4),
+            "forecast_start": forecast[0]["date"],
+            "forecast_end": forecast[-1]["date"],
+            "endpoint_price": round(endpoint_price, 4),
+            "expected_change_pct": round(expected_change_pct, 4),
+            "direction": direction,
+            "confidence": round(confidence, 4),
+            "reason": str(decoded.get("reason", "AI forecast based on recent prices and news sentiment."))[:500],
             "cached": False,
         }
-        with _sentiment_cache_lock:
-            _sentiment_cache[cache_key] = (now, result)
+        with _forecast_cache_lock:
+            _forecast_cache[cache_key] = (now, result)
         return result
     except HTTPError as exc:
-        print(f"[sentiment] HKU API returned HTTP {exc.code}")
-        return {"ok": False, "configured": True, "message": f"HKU GenAI API returned HTTP {exc.code}.", "scores": {}, "metrics": sentiment_metrics([])}
+        print(f"[forecast] HKU API returned HTTP {exc.code}")
+        return {"ok": False, "configured": True, "message": f"HKU GenAI API returned HTTP {exc.code}.", "forecast": []}
     except Exception as exc:  # noqa: BLE001 - keep provider details out of the browser response
-        print(f"[sentiment] HKU API request failed: {exc}")
-        return {"ok": False, "configured": True, "message": "HKU GenAI sentiment request failed.", "scores": {}, "metrics": sentiment_metrics([])}
+        print(f"[forecast] HKU forecast request failed: {exc}")
+        return {"ok": False, "configured": True, "message": "HKU GenAI forecast request failed.", "forecast": []}
 
 
 def parse_date(value: str) -> date:
@@ -410,7 +584,8 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.is_authorized():
             self.request_authentication()
             return
-        if urlparse(self.path).path != "/api/sentiment":
+        path = urlparse(self.path).path
+        if path not in {"/api/sentiment", "/api/forecast"}:
             self.send_error(404, "Not Found")
             return
         try:
@@ -418,13 +593,20 @@ class Handler(SimpleHTTPRequestHandler):
             if content_length > 2_000_000:
                 raise ValueError("request body is too large")
             payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+            if not isinstance(payload, dict):
+                raise ValueError("request body must be a JSON object")
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            error_payload = {"ok": False, "message": str(exc), "forecast": []} if path == "/api/forecast" else {"ok": False, "message": str(exc), "scores": {}, "metrics": sentiment_metrics([])}
+            json_response(self, error_payload, 400)
+            return
+        if path == "/api/sentiment":
             articles = payload.get("articles", [])
             if not isinstance(articles, list):
-                raise ValueError("articles must be a list")
-        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            json_response(self, {"ok": False, "message": str(exc), "scores": {}, "metrics": sentiment_metrics([])}, 400)
-            return
-        result = fetch_hku_sentiment(articles)
+                json_response(self, {"ok": False, "message": "articles must be a list", "scores": {}, "metrics": sentiment_metrics([])}, 400)
+                return
+            result = fetch_hku_sentiment(articles)
+        else:
+            result = fetch_hku_forecast(payload)
         json_response(self, result, 200 if result.get("ok") else 503)
 
     def do_GET(self) -> None:  # noqa: N802
