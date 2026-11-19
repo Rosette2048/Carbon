@@ -71,7 +71,7 @@
     .filter-chip { border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 700; }
     .filter-chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
-    .grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(310px, .92fr); gap: 10px; padding: 10px; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.14fr) minmax(320px, .86fr); gap: 10px; padding: 10px; align-items: stretch; }
     .panel { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
     .price-panel { min-height: 430px; padding: 15px 17px 12px; }
     .section-title-row, .section-title, .summary-heading, .market-nav { display: flex; align-items: center; }
@@ -132,6 +132,9 @@
     .scroll-hint { padding: 5px 17px; background: var(--surface-2); color: var(--muted); font-size: 9px; text-align: right; }
 
     .summary-panel { margin: 0 10px 10px; padding: 12px 15px; }
+    .side-summary-panel { margin: 0; min-height: 430px; }
+    .side-summary-panel .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .full-width-news { grid-column: 1 / -1; }
     .summary-heading { justify-content: space-between; gap: 10px; margin-bottom: 9px; }
     .interpretation { color: var(--muted); font-size: 10px; font-weight: 800; }
     .metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
@@ -168,6 +171,7 @@
       .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .side-summary-panel .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .market-strip { align-items: flex-start; flex-direction: column; }
       .filters { justify-content: flex-start; }
     }
@@ -176,6 +180,7 @@
       .controls { grid-template-columns: 1fr 1fr; }
       .refresh { min-height: 36px; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .side-summary-panel .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .price-panel, .news-panel { min-height: 390px; }
       .price-footer { flex-direction: column; gap: 4px; }
     }
@@ -189,7 +194,7 @@
         <h1>Price context by market and date</h1>
         <p class="intro">Select one or more markets, choose a date range, and use Previous / Next to inspect one market at a time. Prices use the secondary-market snapshot from carbon_task1; news combines Factiva history with recent GDELT coverage.</p>
       </div>
-      <div class="header-note"><strong>Current scope</strong><br />Market selection + date filtering + price chart + Factiva/GDELT news. HKU sentiment is the next integration.</div>
+      <div class="header-note"><strong>Current scope</strong><br />Price chart + HKU sentiment + 14-day AI forecast + Factiva/GDELT news.</div>
     </header>
 
     <section class="app" aria-label="Carbon market price monitor">
@@ -219,36 +224,36 @@
           <div class="price-footer"><span><strong>Secondary / daily</strong> · ICAP snapshot from carbon_task1</span><span id="observationText">— observations</span></div>
         </section>
 
-        <section class="panel news-panel">
+        <section class="panel summary-panel side-summary-panel">
+          <div class="summary-heading"><div class="section-title"><span class="tiny-mark"></span>Sentiment / AI forecast</div><span class="interpretation" id="sentimentInterpretation">Waiting for news data</span></div>
+          <div class="forecast-card" id="forecastCard" hidden>
+            <div>
+              <div class="forecast-kicker">AI forecast · 14-day horizon</div>
+              <div class="forecast-value"><strong id="forecastValue">—</strong><span id="forecastCurrency">per tCO₂e</span></div>
+              <div class="forecast-disclaimer">AI forecast for demonstration purposes only</div>
+            </div>
+            <div>
+              <div class="forecast-meta"><span>Expected change <strong id="forecastChange">—</strong></span><span>Direction <strong id="forecastDirection">—</strong></span><span>Confidence <strong id="forecastConfidence">—</strong></span><span>Forecast window <strong id="forecastWindow">—</strong></span></div>
+              <p class="forecast-reason" id="forecastReason">Waiting for the AI forecast.</p>
+            </div>
+          </div>
+          <div class="metrics">
+            <div class="metric" data-metric="median_score"><span class="summary-label">median_score</span><strong>—</strong><div class="bar"><i></i></div></div>
+            <div class="metric" data-metric="positive_share"><span class="summary-label">positive_share</span><strong>—</strong><div class="bar"><i></i></div></div>
+            <div class="metric" data-metric="neutral_share"><span class="summary-label">neutral_share</span><strong>—</strong><div class="bar"><i></i></div></div>
+            <div class="metric" data-metric="negative_share"><span class="summary-label">negative_share</span><strong>—</strong><div class="bar"><i></i></div></div>
+            <div class="metric" data-metric="news_count"><span class="summary-label">news_count</span><strong>—</strong><div class="bar"><i></i></div></div>
+            <div class="metric" data-metric="score_dispersion"><span class="summary-label">score_dispersion</span><strong>—</strong><div class="bar"><i></i></div></div>
+          </div>
+          <p class="summary-note" id="sentimentNote">Sentiment scores are generated by HKU GenAI on the server; the API key is never sent to the browser.</p>
+        </section>
+
+        <section class="panel news-panel full-width-news">
           <div class="section-title-row"><div><div class="section-title"><span class="tiny-mark"></span>Market news</div><div class="section-subtitle">Factiva + GDELT · newest first</div></div><span class="news-count" id="newsCount">Loading…</span></div>
           <div class="news-scroll" id="newsScroll"><div class="news-state"><div><strong>Loading news</strong><span>Querying Factiva and GDELT for the selected market and dates.</span></div></div></div>
           <div class="scroll-hint">Internal scroll · click an arrow to expand</div>
         </section>
       </div>
-
-      <section class="panel summary-panel">
-        <div class="summary-heading"><div class="section-title"><span class="tiny-mark"></span>Sentiment summary / expected carbon-price impact</div><span class="interpretation" id="sentimentInterpretation">Waiting for news data</span></div>
-        <div class="forecast-card" id="forecastCard" hidden>
-          <div>
-            <div class="forecast-kicker">AI forecast · 14-day horizon</div>
-            <div class="forecast-value"><strong id="forecastValue">—</strong><span id="forecastCurrency">per tCO₂e</span></div>
-            <div class="forecast-disclaimer">AI forecast for demonstration purposes only</div>
-          </div>
-          <div>
-            <div class="forecast-meta"><span>Expected change <strong id="forecastChange">—</strong></span><span>Direction <strong id="forecastDirection">—</strong></span><span>Confidence <strong id="forecastConfidence">—</strong></span><span>Forecast window <strong id="forecastWindow">—</strong></span></div>
-            <p class="forecast-reason" id="forecastReason">Waiting for the AI forecast.</p>
-          </div>
-        </div>
-        <div class="metrics">
-          <div class="metric" data-metric="median_score"><span class="summary-label">median_score</span><strong>—</strong><div class="bar"><i></i></div></div>
-          <div class="metric" data-metric="positive_share"><span class="summary-label">positive_share</span><strong>—</strong><div class="bar"><i></i></div></div>
-          <div class="metric" data-metric="neutral_share"><span class="summary-label">neutral_share</span><strong>—</strong><div class="bar"><i></i></div></div>
-          <div class="metric" data-metric="negative_share"><span class="summary-label">negative_share</span><strong>—</strong><div class="bar"><i></i></div></div>
-          <div class="metric" data-metric="news_count"><span class="summary-label">news_count</span><strong>—</strong><div class="bar"><i></i></div></div>
-          <div class="metric" data-metric="score_dispersion"><span class="summary-label">score_dispersion</span><strong>—</strong><div class="bar"><i></i></div></div>
-        </div>
-        <p class="summary-note" id="sentimentNote">Sentiment scores are generated by HKU GenAI on the server; the API key is never sent to the browser.</p>
-      </section>
 
       <nav class="market-nav" aria-label="Market navigation"><button class="nav-button" id="previousMarket" type="button">← Previous</button><span class="nav-current"><span id="navMarket">EU ETS</span> <span id="navPosition">1 / 3</span></span><button class="nav-button" id="nextMarket" type="button">Next →</button></nav>
     </section>
