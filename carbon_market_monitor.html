@@ -338,7 +338,7 @@
           $('sentimentInterpretation').textContent = 'API key required';
           $('sentimentNote').textContent = data?.message || 'Add HKU_API_KEY in Render Environment Variables to enable sentiment scores.';
         } else if (!data?.ok) {
-          $('sentimentInterpretation').textContent = 'Unavailable';
+          $('sentimentInterpretation').textContent = 'Score pending';
           $('sentimentNote').textContent = data?.message || 'HKU GenAI did not return sentiment scores.';
         } else {
           $('sentimentInterpretation').textContent = 'HKU GenAI score';
@@ -355,13 +355,13 @@
           const factivaCount = Number(data.factiva_count ?? 0);
           const gdeltUnavailable = Boolean(data.gdelt_message || data.rate_limited);
           $('newsCount').innerHTML = gdeltUnavailable
-            ? `${factivaCount + Number(data.gdelt_count ?? 0)} articles · Factiva ${factivaCount} · <span class="source-unavailable">GDELT unavailable</span>`
+            ? `${factivaCount + Number(data.gdelt_count ?? 0)} articles · Factiva ${factivaCount} · <span class="source-unavailable">GDELT ${Number(data.gdelt_count ?? 0)}</span>`
             : 'No matching news';
-          renderNewsState(gdeltUnavailable ? 'GDELT unavailable' : 'No matching news', data.message || 'Try a wider date range or switch the category filter.');
+          renderNewsState('No matching news', data.message || 'Try a wider date range or switch the category filter.');
           return;
         }
         const gdeltUnavailable = Boolean(data.gdelt_message || data.rate_limited);
-        const sourceSummary = `Factiva ${data.factiva_count ?? 0} · ${gdeltUnavailable ? `<span class="source-unavailable">GDELT unavailable</span>` : `GDELT ${data.gdelt_count ?? 0}`}`;
+        const sourceSummary = `Factiva ${data.factiva_count ?? 0} · ${gdeltUnavailable ? `<span class="source-unavailable">GDELT ${data.gdelt_count ?? 0}</span>` : `GDELT ${data.gdelt_count ?? 0}`}`;
         $('newsCount').innerHTML = `${data.count} articles · ${sourceSummary}`;
         if (!data.articles.length) {
           renderNewsState('No matching news', data.message || 'Try a wider date range or switch the category filter.');
@@ -465,9 +465,9 @@
             }
           }
           if (data.gdelt_message && data.rate_limited) {
-            $('statusText').textContent = `F${data.factiva_count ?? 0} · GDELT rate-limited · cloud news shown · ${sentiment.configured && sentiment.ok ? 'HKU ready' : 'HKU pending'}${forecast?.ok ? ' · AI ready' : ''}`;
+            $('statusText').textContent = `F${data.factiva_count ?? 0} · G${data.gdelt_count ?? 0} · cloud news shown · ${sentiment.configured && sentiment.ok ? 'HKU ready' : 'HKU pending'}${forecast?.ok ? ' · AI ready' : ''}`;
           } else if (data.gdelt_message && data.factiva_count) {
-            $('statusText').textContent = `F${data.factiva_count} · GDELT unavailable · ${sentiment.configured && sentiment.ok ? 'HKU ready' : 'HKU pending'}${forecast?.ok ? ' · AI ready' : ''}`;
+            $('statusText').textContent = `F${data.factiva_count} · G${data.gdelt_count ?? 0} · ${sentiment.configured && sentiment.ok ? 'HKU ready' : 'HKU pending'}${forecast?.ok ? ' · AI ready' : ''}`;
           } else {
             $('statusText').textContent = data.ok
               ? `F${data.factiva_count ?? 0} · G${data.gdelt_count ?? 0} · ${sentiment.configured && sentiment.ok ? 'HKU ready' : 'HKU pending'}${forecast?.ok ? ' · AI ready' : ''}`
