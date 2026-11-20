@@ -111,6 +111,7 @@
     .news-panel { min-height: 430px; padding: 15px 0 0; }
     .news-panel .section-title-row { padding: 0 17px; margin-bottom: 10px; }
     .news-count { color: var(--muted); font-size: 10px; font-weight: 750; }
+    .news-count .source-unavailable { color: #b34f43; font-weight: 850; }
     .news-scroll { height: 350px; overflow-y: auto; border-top: 1px solid var(--line); scrollbar-color: var(--line) transparent; }
     .news-item { border-bottom: 1px solid var(--line); }
     .news-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 17px; }
@@ -351,12 +352,17 @@
 
       function renderNews(data, sentiment = null) {
         if (!data.ok) {
-          $('newsCount').textContent = 'Unavailable';
-          renderNewsState('News unavailable', data.message || 'GDELT did not return results for this selection.');
+          const factivaCount = Number(data.factiva_count ?? 0);
+          const gdeltUnavailable = Boolean(data.gdelt_message || data.rate_limited);
+          $('newsCount').innerHTML = gdeltUnavailable
+            ? `${factivaCount + Number(data.gdelt_count ?? 0)} articles · Factiva ${factivaCount} · <span class="source-unavailable">GDELT unavailable</span>`
+            : 'No matching news';
+          renderNewsState(gdeltUnavailable ? 'GDELT unavailable' : 'No matching news', data.message || 'Try a wider date range or switch the category filter.');
           return;
         }
-        const sourceSummary = `Factiva ${data.factiva_count ?? 0} · GDELT ${data.gdelt_count ?? 0}`;
-        $('newsCount').textContent = `${data.count} articles · ${sourceSummary}`;
+        const gdeltUnavailable = Boolean(data.gdelt_message || data.rate_limited);
+        const sourceSummary = `Factiva ${data.factiva_count ?? 0} · ${gdeltUnavailable ? `<span class="source-unavailable">GDELT unavailable</span>` : `GDELT ${data.gdelt_count ?? 0}`}`;
+        $('newsCount').innerHTML = `${data.count} articles · ${sourceSummary}`;
         if (!data.articles.length) {
           renderNewsState('No matching news', data.message || 'Try a wider date range or switch the category filter.');
           return;
