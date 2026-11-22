@@ -172,6 +172,96 @@
     .simulation-metric strong.down { color: var(--negative); }
     .simulation-metric strong.flat { color: var(--neutral); }
     .simulation-note { margin-top: 11px; color: var(--muted); font-size: 9px; line-height: 1.4; }
+    .crowd-session-strip { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 68px; margin: 10px 10px 0; padding: 9px 14px; border: 1px solid #c9d9d2; border-radius: var(--radius); background: #f6faf8; }
+    .crowd-session-strip[hidden], .crowd-panel[hidden], .participant-view[hidden] { display: none; }
+    .crowd-session-copy { min-width: 0; }
+    .crowd-kicker { display: block; color: var(--accent); font-size: 8px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+    .crowd-session-copy strong { display: block; margin-top: 2px; overflow: hidden; font-size: 11px; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+    .crowd-session-copy > span:last-child { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; line-height: 1.25; }
+    .crowd-session-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .session-state { display: inline-flex; align-items: center; min-height: 25px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 9px; font-weight: 850; white-space: nowrap; }
+    .session-state.live { border-color: #c9d9d2; background: var(--accent-soft); color: var(--accent); }
+    .session-state.closed { border-color: #e8c2b9; background: #fff7f4; color: #a95643; }
+    .primary-action, .secondary-action { min-height: 30px; padding: 0 11px; border-radius: 6px; cursor: pointer; font-size: 9px; font-weight: 850; white-space: nowrap; }
+    .primary-action { border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+    .secondary-action { border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+    .primary-action:hover, .primary-action:focus-visible, .secondary-action:hover, .secondary-action:focus-visible { border-color: var(--accent); }
+    .primary-action:disabled, .secondary-action:disabled { cursor: default; opacity: .45; }
+    .crowd-panel { min-height: 560px; padding: 12px 15px; }
+    .crowd-panel-subtitle { margin-top: 4px; color: var(--muted); font-size: 9px; }
+    .crowd-news-scroll { height: 148px; margin-top: 10px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; scrollbar-color: var(--line) transparent; }
+    .synthetic-card { padding: 9px 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
+    .synthetic-card:last-child { border-bottom: 0; }
+    .synthetic-card-head { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .synthetic-card h4 { margin: 4px 0 3px; font-size: 10px; line-height: 1.3; }
+    .synthetic-card p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.35; }
+    .synthetic-warning { display: block; margin-top: 5px; color: var(--warning); font-size: 8px; font-weight: 800; line-height: 1.25; }
+    .crowd-join-row { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px; align-items: center; margin-top: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); }
+    .crowd-qr { display: block; width: 70px; height: 70px; padding: 3px; border: 1px solid var(--line); border-radius: 4px; background: #fff; object-fit: contain; }
+    .crowd-join-copy { min-width: 0; }
+    .crowd-join-copy strong { display: block; font-size: 10px; }
+    .crowd-join-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+    .join-link { margin-top: 5px; overflow: hidden; color: var(--accent); font-size: 9px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .crowd-join-copy .secondary-action { margin-top: 7px; }
+    .crowd-session-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
+    .crowd-session-meta div { padding: 6px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); }
+    .crowd-session-meta span, .crowd-metric span { display: block; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .crowd-session-meta strong { display: block; margin-top: 3px; font-size: 13px; letter-spacing: -.04em; }
+    .crowd-vote-panel { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+    .crowd-vote-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .crowd-vote-head strong { font-size: 10px; }
+    .crowd-vote-head span { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+    .vote-chart { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: end; gap: 7px; height: 104px; margin-top: 9px; padding: 7px 7px 0; border-bottom: 1px solid var(--line); }
+    .vote-column { display: flex; min-width: 0; height: 100%; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+    .vote-count { color: var(--muted); font-size: 9px; font-weight: 850; }
+    .vote-bar-track { display: flex; width: 100%; height: 74px; align-items: flex-end; justify-content: center; }
+    .vote-bar-fill { width: min(28px, 70%); min-height: 3px; border-radius: 4px 4px 0 0; background: var(--neutral); transition: height .35s ease; }
+    .vote-column:nth-child(1) .vote-bar-fill { background: var(--negative); }
+    .vote-column:nth-child(2) .vote-bar-fill { background: #ce7c72; }
+    .vote-column:nth-child(3) .vote-bar-fill { background: var(--neutral); }
+    .vote-column:nth-child(4) .vote-bar-fill { background: #6c9b75; }
+    .vote-column:nth-child(5) .vote-bar-fill { background: var(--positive); }
+    .vote-column.new-vote .vote-bar-fill { animation: vote-pulse .55s ease; }
+    .vote-label { min-height: 22px; color: var(--muted); font-size: 7px; line-height: 1.15; text-align: center; }
+    @keyframes vote-pulse { 0% { transform: scaleY(.78); transform-origin: bottom; } 100% { transform: scaleY(1); transform-origin: bottom; } }
+    .crowd-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
+    .crowd-metric { min-width: 0; }
+    .crowd-metric strong { display: block; margin-top: 3px; overflow: hidden; color: var(--ink); font-size: 13px; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
+    .crowd-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 9px; }
+    .crowd-method { margin: 8px 0 0; color: var(--muted); font-size: 8px; line-height: 1.35; }
+    .crowd-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; color: var(--muted); font-size: 9px; line-height: 1.35; }
+    .crowd-legend[hidden] { display: none; }
+    .line-key.crowd-observed { border-top-color: var(--accent); }
+    .line-key.crowd-baseline { border-top: 2px dashed #808c87; }
+    .line-key.crowd-forecast { border-top-color: #d87968; border-top-width: 3px; }
+    .participant-view { display: none; min-height: 100vh; padding: 18px; background: var(--page); }
+    body.participant-open .page { display: none; }
+    .participant-view:not([hidden]) { display: flex; align-items: center; justify-content: center; }
+    .participant-screen { width: min(390px, 100%); min-height: 844px; padding: 20px 18px 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); }
+    .participant-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .participant-brand { color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+    .participant-exit { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 9px; font-weight: 800; }
+    .participant-screen h1 { margin: 28px 0 4px; font-size: 28px; letter-spacing: -.06em; line-height: 1; }
+    .participant-market { color: var(--muted); font-size: 12px; font-weight: 750; }
+    .participant-session-code { display: inline-flex; margin-top: 14px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .08em; }
+    .participant-warning { margin-top: 18px; padding: 10px; border: 1px solid #e2c08b; border-radius: 8px; background: #fffaf0; color: #90601d; font-size: 10px; font-weight: 750; line-height: 1.35; }
+    .participant-progress { margin-top: 20px; color: var(--muted); font-size: 10px; font-weight: 800; }
+    .participant-progress-bar { height: 5px; margin-top: 6px; overflow: hidden; border-radius: 999px; background: var(--line); }
+    .participant-progress-bar i { display: block; width: 25%; height: 100%; border-radius: inherit; background: var(--accent); transition: width .25s ease; }
+    .participant-card { margin-top: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+    .participant-card small { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .participant-card h2 { margin: 7px 0 8px; font-size: 17px; line-height: 1.2; }
+    .participant-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .participant-vote-label { margin-top: 21px; color: var(--muted); font-size: 10px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+    .participant-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin-top: 9px; }
+    .participant-option { min-height: 58px; padding: 4px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); cursor: pointer; font-size: 8px; font-weight: 850; line-height: 1.15; }
+    .participant-option.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .participant-submit { width: 100%; min-height: 44px; margin-top: 14px; }
+    .participant-confirmation { display: none; margin-top: 14px; padding: 11px; border: 1px solid #c9d9d2; border-radius: 8px; background: #f4faf7; color: var(--accent); font-size: 10px; font-weight: 800; line-height: 1.4; }
+    .participant-confirmation.visible { display: block; }
+    .participant-next { display: none; width: 100%; margin-top: 10px; }
+    body.crowd-mode-active .market-strip, body.crowd-mode-active .full-width-news { display: none; }
+    body.crowd-mode-active .crowd-session-strip { display: flex; }
     #priceChart .observed-line { fill: none; stroke: #aebbb5; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
     #priceChart .baseline-line { fill: none; stroke: #808c87; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 5 5; }
     #priceChart .scenario-line { fill: none; stroke: #d87968; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
@@ -183,6 +273,15 @@
     #priceChart .scenario-point:hover, #priceChart .scenario-point:focus { fill: #d87968; outline: none; }
     #priceChart .simulation-divider { stroke: #d87968; stroke-width: 1.2; stroke-dasharray: 4 5; }
     #priceChart .simulation-label { fill: #a95643; font-size: 9px; font-weight: 800; }
+    #priceChart .crowd-baseline-line { fill: none; stroke: #808c87; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 5 5; }
+    #priceChart .crowd-forecast-line { fill: none; stroke: #d87968; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+    #priceChart .crowd-band { fill: rgba(216,121,104,.13); stroke: none; }
+    #priceChart .crowd-baseline-point { fill: var(--surface); stroke: #808c87; stroke-width: 2; cursor: pointer; }
+    #priceChart .crowd-scenario-point { fill: var(--surface); stroke: #d87968; stroke-width: 2.3; cursor: pointer; }
+    #priceChart .crowd-baseline-point:hover, #priceChart .crowd-baseline-point:focus { fill: #808c87; outline: none; }
+    #priceChart .crowd-scenario-point:hover, #priceChart .crowd-scenario-point:focus { fill: #d87968; outline: none; }
+    #priceChart .crowd-divider { stroke: #d87968; stroke-width: 1.2; stroke-dasharray: 4 5; }
+    #priceChart .crowd-label { fill: #a95643; font-size: 9px; font-weight: 800; }
     .full-width-news { grid-column: 1 / -1; }
     .summary-heading { justify-content: space-between; gap: 10px; margin-bottom: 9px; }
     .interpretation { color: var(--muted); font-size: 10px; font-weight: 800; }
@@ -223,8 +322,11 @@
       .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .side-summary-panel .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .simulation-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .crowd-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .market-strip { align-items: flex-start; flex-direction: column; }
       .filters { justify-content: flex-start; }
+      .crowd-session-strip { align-items: flex-start; flex-direction: column; }
+      .crowd-session-actions { justify-content: space-between; width: 100%; }
     }
     @media (max-width: 520px) {
       .page { width: calc(100% - 16px); }
@@ -233,8 +335,13 @@
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .side-summary-panel .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .simulation-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .crowd-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .price-panel, .news-panel { min-height: 390px; }
       .price-footer { flex-direction: column; gap: 4px; }
+      .mode-switch { flex-wrap: wrap; border-radius: 12px; }
+      .mode-button { flex: 1 1 auto; }
+      .participant-view { padding: 0; }
+      .participant-screen { min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
     }
   </style>
 </head>
@@ -250,6 +357,7 @@
         <div class="mode-switch" role="tablist" aria-label="Dashboard mode">
           <button class="mode-button active" id="marketViewMode" type="button" role="tab" aria-selected="true">Market View</button>
           <button class="mode-button" id="simulationMode" type="button" role="tab" aria-selected="false">Simulation Mode</button>
+          <button class="mode-button" id="crowdMode" type="button" role="tab" aria-selected="false">Crowd Sentiment Mode</button>
         </div>
         <div class="header-note"><strong>Current scope</strong><br />Price chart + HKU sentiment + 14-day AI forecast + Factiva/GDELT news.</div>
       </div>
@@ -273,6 +381,11 @@
 
       <div class="market-strip"><div class="market-name"><strong id="marketTitle">EU ETS</strong><span><i></i><span id="viewingText">viewing 1 of 3</span></span></div><div class="market-meta" id="availabilityText"></div><div class="filters" id="newsFilters" aria-label="News category filters"><button class="filter-chip active" data-category="all" type="button">All</button><button class="filter-chip" data-category="policy" type="button">Policy</button><button class="filter-chip" data-category="regulation" type="button">Regulation</button><button class="filter-chip" data-category="industry" type="button">Industry</button><button class="filter-chip" data-category="energy" type="button">Energy</button></div></div>
 
+      <section class="crowd-session-strip" id="crowdSessionStrip" hidden aria-label="Crowd sentiment session setup">
+        <div class="crowd-session-copy"><span class="crowd-kicker">Crowd Sentiment Mode</span><strong><span id="crowdMarketLabel">EU ETS</span> · <span id="crowdPeriodLabel">Selected price period</span></strong><span>News source: <span id="crowdSourceLabel">Synthetic demo news</span> · price period is separate from the news reference window</span></div>
+        <div class="crowd-session-actions"><span id="sessionState" class="session-state">Waiting</span><button id="startSession" class="primary-action" type="button">Start Session</button></div>
+      </section>
+
       <div class="grid">
         <section class="panel price-panel">
           <div class="section-title-row"><div><div class="section-title"><span class="tiny-mark"></span>Carbon price context</div><div class="section-subtitle" id="priceSubtitle">European Union Emissions Trading System</div></div><span class="badge">Historical data</span></div>
@@ -281,6 +394,7 @@
           <div class="chart-wrap" id="chartWrap"><svg id="priceChart" viewBox="0 0 800 300" role="img" aria-label="Carbon price chart"></svg><div class="chart-empty" id="chartEmpty" hidden>No price observations in this date range.</div><div class="tooltip" id="chartTooltip"></div></div>
           <div class="chart-legend" id="marketLegend"><span><i class="line-key"></i>Actual price</span><span><i class="line-key forecast"></i>AI forecast</span></div>
           <div class="chart-legend" id="simulationLegend" hidden><span><i class="line-key observed"></i>Observed price</span><span><i class="line-key baseline"></i>AI baseline</span><span><i class="line-key scenario"></i>Simulated scenario</span></div>
+          <div class="crowd-legend" id="crowdLegend" hidden><span><i class="line-key crowd-observed"></i>Observed price</span><span><i class="line-key crowd-baseline"></i>AI baseline</span><span><i class="line-key crowd-forecast"></i>Demo crowd-informed forecast</span></div>
           <div class="price-footer"><span><strong>Secondary / daily</strong> · ICAP snapshot from carbon_task1</span><span id="observationText">— observations</span></div>
         </section>
 
@@ -330,9 +444,18 @@
           </div>
           <p class="simulation-note"><strong>Method note:</strong> The scenario shifts the HKU baseline using selected sentiment relative to observed sentiment and market sensitivity. It is an illustrative 14-day simulation.</p>
         </section>
+
+        <section class="panel crowd-panel side-summary-panel" id="crowdPanel" hidden aria-labelledby="crowdTitle">
+          <div class="section-title-row"><div class="section-title" id="crowdTitle"><span class="tiny-mark"></span>Crowd session</div><span id="crowdSideStatus" class="session-state">Waiting</span></div>
+          <div class="crowd-panel-subtitle">Synthetic demo scenarios · host controls</div>
+          <div class="crowd-news-scroll" id="crowdNewsList"></div>
+          <div class="crowd-join-row"><img class="crowd-qr" id="crowdQr" alt="QR code to join the crowd sentiment session" /><div class="crowd-join-copy"><strong>Join from a phone</strong><span>Scan to vote on each scenario</span><div class="join-link" id="crowdJoinLink">—</div><button id="openParticipant" class="secondary-action" type="button">Open participant view</button></div></div>
+          <div class="crowd-session-meta"><div><span>Participants</span><strong id="crowdParticipantCount">0</strong></div><div><span>Session code</span><strong id="crowdSessionCode">—</strong></div><div><span>Voting status</span><strong id="crowdVotingLabel">Waiting</strong></div></div>
+          <div class="crowd-vote-panel"><div class="crowd-vote-head"><strong>Live vote distribution</strong><span id="crowdVoteStatus">Waiting for session</span></div><div id="voteChart" class="vote-chart" aria-label="Live crowd vote distribution"><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Strongly<br />bearish</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Bearish</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Neutral</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Bullish</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Strongly<br />bullish</span></div></div><div class="crowd-metrics"><div class="crowd-metric"><span>Total votes</span><strong id="crowdTotalVotes">0</strong></div><div class="crowd-metric"><span id="crowdScoreLabel">Median score</span><strong id="crowdMedianScore">—</strong></div><div class="crowd-metric"><span>Positive share</span><strong id="crowdPositiveShare">—</strong></div><div class="crowd-metric"><span>Neutral share</span><strong id="crowdNeutralShare">—</strong></div><div class="crowd-metric"><span>Negative share</span><strong id="crowdNegativeShare">—</strong></div><div class="crowd-metric"><span>Confidence</span><strong id="crowdConfidence">—</strong></div></div><div class="crowd-actions"><button id="closeVoting" class="secondary-action" type="button" disabled>Close Voting</button><button id="generateCrowdForecast" class="primary-action" type="button" disabled>Generate Forecast</button></div><p class="crowd-method">Final crowd sentiment and recent price history are sent to HKU GenAI when configured; the chart keeps a transparent fallback path for demonstration. Synthetic scenarios are not real news.</p></div>
+        </section>
         </div>
 
-        <section class="panel news-panel full-width-news">
+        <section class="panel news-panel full-width-news" id="marketNewsPanel">
           <div class="section-title-row"><div><div class="section-title"><span class="tiny-mark"></span>Market news</div><div class="section-subtitle">Factiva + GDELT · newest first</div></div><span class="news-count" id="newsCount">Loading…</span></div>
           <div class="news-scroll" id="newsScroll"><div class="news-state"><div><strong>Loading news</strong><span>Querying Factiva and GDELT for the selected market and dates.</span></div></div></div>
           <div class="scroll-hint">Internal scroll · click an arrow to expand</div>
@@ -343,15 +466,32 @@
     </section>
   </main>
 
+  <section class="participant-view" id="participantView" hidden aria-label="Mobile participant voting screen">
+    <div class="participant-screen"><div class="participant-top"><span class="participant-brand">Carbon Market Monitor</span><button id="closeParticipant" class="participant-exit" type="button">Host dashboard</button></div><h1>Vote on the scenario</h1><div class="participant-market" id="participantMarket">EU ETS · Crowd Sentiment Session</div><span class="participant-session-code" id="participantSessionCode">SESSION —</span><div class="participant-warning">Synthetic demo scenario — not a real news report. Your vote is used for this demonstration session.</div><div class="participant-progress" id="participantProgress">Scenario 1 of 4<div class="participant-progress-bar"><i id="participantProgressBar"></i></div></div><div class="participant-card"><small id="participantCategory">Policy · scenario 1</small><h2 id="participantHeadline">Waiting for the session to start</h2><p id="participantSummary">Select a session from the host dashboard to begin.</p></div><div class="participant-vote-label">Expected carbon-price impact</div><div class="participant-options"><button class="participant-option" type="button" data-vote="-1">Strongly<br />bearish</button><button class="participant-option" type="button" data-vote="-0.5">Bearish</button><button class="participant-option" type="button" data-vote="0">Neutral</button><button class="participant-option" type="button" data-vote="0.5">Bullish</button><button class="participant-option" type="button" data-vote="1">Strongly<br />bullish</button></div><button id="submitParticipantVote" class="primary-action participant-submit" type="button" disabled>Submit Vote</button><div id="participantConfirmation" class="participant-confirmation">Vote recorded for this scenario. Thanks for contributing to the live crowd signal.</div><button id="nextParticipantScenario" class="secondary-action participant-next" type="button">Continue to next scenario</button></div>
+  </section>
+
   <script src="carbon_market_price_data.js"></script>
   <script>
     (() => {
       const payload = window.CARBON_PRICE_DATA;
       const markets = payload.markets;
       const byId = new Map(markets.map((market) => [market.id, market]));
-      const state = { selected: markets.map((market) => market.id), currentIndex: 0, start: '', end: '', category: 'all', newsRequestId: 0, forecast: null, mode: 'market', observedSentiment: 0, scenarioScore: 0, scenarioKey: '' };
+      const state = { selected: markets.map((market) => market.id), currentIndex: 0, start: '', end: '', category: 'all', newsRequestId: 0, forecast: null, mode: 'market', observedSentiment: 0, scenarioScore: 0, scenarioKey: '', crowdKey: '', crowdSessionId: '', crowdSessionStatus: 'waiting', crowdRemote: false, crowdSyncTimer: null, crowdVotingClosed: false, crowdForecastGenerated: false, crowdVotes: [0, 0, 0, 0, 0], crowdScenarios: [], participantScenarioIndex: 0, participantVote: null };
+      const joinParams = new URLSearchParams(window.location.search);
+      const joinMode = joinParams.get('join') === '1';
+      if (joinParams.get('market') && byId.has(joinParams.get('market'))) {
+        state.selected = [joinParams.get('market')];
+        state.currentIndex = 0;
+      }
       const $ = (id) => document.getElementById(id);
       const MARKET_SENSITIVITY = { eu: 0.08, uk: 0.09, california: 0.07 };
+      const CROWD_SCORE_VALUES = [-1, -0.5, 0, 0.5, 1];
+      const SYNTHETIC_SCENARIO_TEMPLATES = [
+        { category: 'Policy', title: 'Policy makers consider a tighter allowance reserve rule', summary: 'A hypothetical reserve adjustment could change how compliance buyers time their purchases.' },
+        { category: 'Allowance supply', title: 'A hypothetical auction schedule shift changes near-term supply', summary: 'A change in the release cadence could alter the balance between current demand and available allowances.' },
+        { category: 'Energy', title: 'Lower power prices create a hypothetical clean-spread signal', summary: 'Different generation economics could influence fuel switching and allowance demand expectations.' },
+        { category: 'Industrial activity', title: 'Industrial output recovers in a hypothetical demand case', summary: 'A stronger production outlook could increase the market’s expected compliance requirement.' },
+      ];
 
       const formatPrice = (market, value) => `${market.symbol}${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       const formatDate = (date) => new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -366,6 +506,31 @@
         value.setUTCDate(value.getUTCDate() + days);
         return value.toISOString().slice(0, 10);
       };
+      const formatCrowdPeriod = (date) => date ? new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }) : 'Selected price period';
+      const crowdScoreLabel = (score) => `${Number(score) >= 0 ? '+' : ''}${Number(score).toFixed(2)}`;
+      const crowdSessionCode = (market) => `${market.id.toUpperCase()}-${(state.end || 'DEMO').replaceAll('-', '').slice(4) || 'DEMO'}`;
+      const crowdJoinUrl = (market) => {
+        const params = new URLSearchParams({ join: '1', market: market.id, start: state.start, end: state.end, session: crowdSessionCode(market) });
+        return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+      };
+      const crowdScenariosFor = (market) => SYNTHETIC_SCENARIO_TEMPLATES.map((item, index) => ({ ...item, id: `${market.id}-scenario-${index + 1}`, index: index + 1 }));
+
+      function renderCrowdScenarios(market) {
+        state.crowdScenarios = crowdScenariosFor(market);
+        $('crowdNewsList').innerHTML = state.crowdScenarios.map((item) => `<article class="synthetic-card"><div class="synthetic-card-head"><span>${escapeHtml(item.category)}</span><span>Scenario ${item.index}</span></div><h4>${escapeHtml(item.title)}</h4><p>${escapeHtml(item.summary)}</p><small class="synthetic-warning">Synthetic demo scenario — not a real news report.</small></article>`).join('');
+        const code = crowdSessionCode(market);
+        const joinUrl = crowdJoinUrl(market);
+        $('crowdMarketLabel').textContent = market.name;
+        $('crowdPeriodLabel').textContent = `${formatCrowdPeriod(state.start)} – ${formatCrowdPeriod(state.end)}`;
+        $('crowdSourceLabel').textContent = 'Synthetic demo news';
+        $('crowdSessionCode').textContent = code;
+        $('crowdJoinLink').textContent = joinUrl;
+        $('crowdQr').src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(joinUrl)}`;
+        $('crowdQr').alt = `QR code to join the ${market.name} crowd sentiment session`;
+        $('participantMarket').textContent = `${market.name} · Crowd Sentiment Session`;
+        $('participantSessionCode').textContent = `SESSION ${code}`;
+        updateParticipantScenario();
+      }
       const currentMarket = () => byId.get(state.selected[state.currentIndex]);
 
       function renderMarketOptions() {
@@ -706,6 +871,141 @@
         setSimulationTone($('simulationDirection'), tone);
       }
 
+      function crowdMedianScore() {
+        const scores = [];
+        state.crowdVotes.forEach((count, index) => { for (let i = 0; i < count; i += 1) scores.push(CROWD_SCORE_VALUES[index]); });
+        if (!scores.length) return 0;
+        return scores[Math.floor(scores.length / 2)];
+      }
+
+      function buildCrowdForecast(market, rows) {
+        if (!rows.length) return [];
+        const observed = Number(rows.at(-1).price);
+        const baseline = state.forecast?.forecast?.length
+          ? state.forecast.forecast
+          : Array.from({ length: 14 }, (_, index) => ({ date: shiftDate(rows.at(-1).date, index + 1), predicted_price: observed, lower_bound: observed * .98, upper_bound: observed * 1.02 }));
+        const score = crowdMedianScore();
+        const sensitivity = MARKET_SENSITIVITY[market.id] ?? .08;
+        return baseline.map((point, index) => {
+          const progress = (index + 1) / baseline.length;
+          const baselinePrice = Number(point.predicted_price ?? observed);
+          const impact = Math.exp(sensitivity * score * progress);
+          const lower = Number(point.lower_bound ?? baselinePrice * .98);
+          const upper = Number(point.upper_bound ?? baselinePrice * 1.02);
+          return { ...point, predicted_price: baselinePrice, lower_bound: lower, upper_bound: upper, scenario_price: baselinePrice * impact, scenario_lower: lower * impact, scenario_upper: upper * impact };
+        });
+      }
+
+      function setCrowdSessionState(status) {
+        state.crowdSessionStatus = status;
+        const labels = { waiting: 'Waiting', live: 'Voting live', closed: 'Voting closed' };
+        ['sessionState', 'crowdSideStatus'].forEach((id) => {
+          const element = $(id);
+          element.textContent = labels[status];
+          element.classList.toggle('live', status === 'live');
+          element.classList.toggle('closed', status === 'closed');
+        });
+        $('crowdVotingLabel').textContent = labels[status];
+        $('crowdVoteStatus').textContent = status === 'live' ? 'Updating live' : status === 'closed' ? 'Final distribution' : 'Waiting for session';
+      }
+
+      function applyCrowdSnapshot(snapshot) {
+        if (!snapshot?.ok) return false;
+        state.crowdSessionId = snapshot.session || state.crowdSessionId;
+        state.crowdRemote = true;
+        state.crowdVotes = Array.isArray(snapshot.votes) && snapshot.votes.length === 5 ? snapshot.votes.map((value) => Number(value) || 0) : state.crowdVotes;
+        state.crowdVotingClosed = snapshot.status === 'closed';
+        setCrowdSessionState(snapshot.status || 'waiting');
+        $('crowdScoreLabel').textContent = state.crowdVotingClosed ? 'Final crowd score' : 'Median score';
+        $('closeVoting').disabled = snapshot.status !== 'live';
+        $('generateCrowdForecast').disabled = !state.crowdVotingClosed;
+        updateCrowdVoteChart();
+        return true;
+      }
+
+      async function syncCrowdSession(create = false) {
+        const market = currentMarket();
+        const session = state.crowdSessionId || crowdSessionCode(market);
+        try {
+          const response = create
+            ? await fetch('/api/crowd/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session, market: market.id, start: state.start, end: state.end, reset: true }) })
+            : await fetch(`/api/crowd/session?session=${encodeURIComponent(session)}`);
+          const snapshot = await response.json();
+          if (!response.ok) return false;
+          return applyCrowdSnapshot(snapshot);
+        } catch (error) {
+          state.crowdRemote = false;
+          return false;
+        }
+      }
+
+      function startCrowdPolling() {
+        if (state.crowdSyncTimer) window.clearInterval(state.crowdSyncTimer);
+        state.crowdSyncTimer = window.setInterval(() => {
+          if (state.mode === 'crowd' && state.crowdRemote && state.crowdSessionId && state.crowdSessionStatus === 'live') syncCrowdSession();
+        }, 2000);
+      }
+
+      function updateCrowdVoteChart(changedIndex = -1) {
+        const total = state.crowdVotes.reduce((sum, count) => sum + count, 0);
+        const maxVotes = Math.max(1, ...state.crowdVotes);
+        $('voteChart').querySelectorAll('.vote-column').forEach((column, index) => {
+          column.querySelector('.vote-count').textContent = state.crowdVotes[index];
+          column.querySelector('.vote-bar-fill').style.height = `${Math.max(3, (state.crowdVotes[index] / maxVotes) * 68)}px`;
+          column.classList.toggle('new-vote', changedIndex === index);
+        });
+        const score = crowdMedianScore();
+        const positive = total ? Math.round(((state.crowdVotes[3] + state.crowdVotes[4]) / total) * 100) : 0;
+        const neutral = total ? Math.round((state.crowdVotes[2] / total) * 100) : 0;
+        const negative = total ? Math.round(((state.crowdVotes[0] + state.crowdVotes[1]) / total) * 100) : 0;
+        $('crowdParticipantCount').textContent = total;
+        $('crowdTotalVotes').textContent = total;
+        $('crowdMedianScore').textContent = total ? crowdScoreLabel(score) : '—';
+        $('crowdMedianScore').dataset.score = String(score);
+        $('crowdPositiveShare').textContent = total ? `${positive}%` : '—';
+        $('crowdNeutralShare').textContent = total ? `${neutral}%` : '—';
+        $('crowdNegativeShare').textContent = total ? `${negative}%` : '—';
+        $('crowdConfidence').textContent = state.crowdVotingClosed && total ? `${Math.min(88, 52 + Math.round(total * 1.2))}%` : '—';
+        drawChart(currentMarket(), currentMarket().rows.filter((row) => row.date >= state.start && row.date <= state.end), state.forecast);
+      }
+
+      function updateParticipantScenario() {
+        const scenario = state.crowdScenarios[state.participantScenarioIndex];
+        if (!scenario) return;
+        $('participantProgress').firstChild.textContent = `Scenario ${scenario.index} of ${state.crowdScenarios.length}`;
+        $('participantProgressBar').style.width = `${(scenario.index / state.crowdScenarios.length) * 100}%`;
+        $('participantCategory').textContent = `${scenario.category} · scenario ${scenario.index}`;
+        $('participantHeadline').textContent = scenario.title;
+        $('participantSummary').textContent = scenario.summary;
+        document.querySelectorAll('.participant-option').forEach((button) => button.classList.remove('selected'));
+        $('submitParticipantVote').disabled = true;
+        $('participantConfirmation').classList.remove('visible');
+        $('nextParticipantScenario').style.display = 'none';
+        state.participantVote = null;
+      }
+
+      function renderCrowdSession(market) {
+        const key = `${market.id}|${state.start}|${state.end}`;
+        if (state.crowdKey !== key) {
+          state.crowdKey = key;
+          state.crowdSessionId = crowdSessionCode(market);
+          state.crowdRemote = false;
+          state.crowdSessionStatus = 'waiting';
+          state.crowdVotingClosed = false;
+          state.crowdForecastGenerated = false;
+          state.crowdVotes = [0, 0, 0, 0, 0];
+          state.participantScenarioIndex = 0;
+          state.participantVote = null;
+        }
+        renderCrowdScenarios(market);
+        $('crowdScoreLabel').textContent = state.crowdVotingClosed ? 'Final crowd score' : 'Median score';
+        $('closeVoting').disabled = state.crowdSessionStatus !== 'live';
+        $('generateCrowdForecast').disabled = !state.crowdVotingClosed;
+        $('generateCrowdForecast').textContent = state.crowdForecastGenerated ? 'Forecast generated' : 'Generate Forecast';
+        setCrowdSessionState(state.crowdSessionStatus);
+        updateCrowdVoteChart();
+      }
+
       function drawChart(market, rows, forecast = null) {
         const svg = $('priceChart');
         const empty = $('chartEmpty');
@@ -725,15 +1025,21 @@
         const plotW = W - left - right, plotH = H - top - bottom;
         const forecastRows = forecast?.forecast || [];
         const simulationActive = state.mode === 'simulation';
+        const crowdActive = state.mode === 'crowd';
+        const crowdRows = crowdActive ? buildCrowdForecast(market, rows) : [];
+        const crowdForecastVisible = crowdActive && state.crowdForecastGenerated;
         const scenarioRows = simulationActive ? buildScenarioForecast(forecast, market) : [];
         const forecastValues = simulationActive
           ? scenarioRows.flatMap((point) => [point.scenario_price, point.scenario_lower, point.scenario_upper, point.predicted_price])
+          : crowdForecastVisible
+            ? crowdRows.flatMap((point) => [point.scenario_price, point.scenario_lower, point.scenario_upper, point.predicted_price])
           : forecastRows.flatMap((point) => [point.predicted_price, point.lower_bound, point.upper_bound]);
         const values = [...rows.map((row) => row.price), ...forecastValues];
         const min = Math.min(...values), max = Math.max(...values);
         const spread = max - min || Math.max(1, max * .04);
         const yMin = min - spread * .08, yMax = max + spread * .08;
-        const startMs = Date.parse(`${rows[0].date}T00:00:00Z`), endDate = forecastRows.at(-1)?.date || rows.at(-1).date, endMs = Date.parse(`${endDate}T00:00:00Z`);
+        const futureRows = crowdForecastVisible ? crowdRows : forecastRows;
+        const startMs = Date.parse(`${rows[0].date}T00:00:00Z`), endDate = futureRows.at(-1)?.date || rows.at(-1).date, endMs = Date.parse(`${endDate}T00:00:00Z`);
         const xFor = (row) => left + (endMs === startMs ? plotW / 2 : (Date.parse(`${row.date}T00:00:00Z`) - startMs) / (endMs - startMs) * plotW);
         const yFor = (row, value = row.price ?? row.predicted_price) => top + (yMax - value) / (yMax - yMin) * plotH;
         const maxPoints = 180;
@@ -745,8 +1051,8 @@
           const value = yMax - (yMax - yMin) * index / 4;
           return `<line class="grid-line" x1="${left}" y1="${y}" x2="${W - right}" y2="${y}" /><text class="axis-label" x="4" y="${y + 4}">${esc(formatPrice(market, value))}</text>`;
         }).join('');
-        const labelRows = forecastRows.length
-          ? [rows[0], rows[Math.round((rows.length - 1) * .33)], rows[Math.round((rows.length - 1) * .66)], { date: forecastRows.at(-1).date }]
+        const labelRows = futureRows.length
+          ? [rows[0], rows[Math.round((rows.length - 1) * .33)], rows[Math.round((rows.length - 1) * .66)], { date: futureRows.at(-1).date }]
           : [0, .33, .66, 1].map((ratio) => rows[Math.min(rows.length - 1, Math.round((rows.length - 1) * ratio))]);
         const labels = labelRows.filter((row, index, list) => list.findIndex((item) => item.date === row.date) === index).map((row, index, list) => {
           const anchor = index === 0 ? 'start' : index === list.length - 1 ? 'end' : 'middle';
@@ -759,28 +1065,37 @@
         const pathFor = (items, valueKey = null) => items.length ? items.map((row, index) => `${index ? 'L' : 'M'} ${xFor(row).toFixed(2)} ${yFor(row, valueKey ? row[valueKey] : undefined).toFixed(2)}`).join(' ') : '';
         const forecastLine = forecastRows.length ? pathFor([rows.at(-1), ...forecastRows]) : '';
         const scenarioLine = scenarioRows.length ? pathFor([rows.at(-1), ...scenarioRows], 'scenario_price') : '';
+        const crowdBaselineLine = crowdRows.length ? pathFor([rows.at(-1), ...crowdRows], 'predicted_price') : '';
+        const crowdForecastLine = crowdRows.length ? pathFor([rows.at(-1), ...crowdRows], 'scenario_price') : '';
         const forecastBand = forecastRows.length ? `${forecastRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.upper_bound).toFixed(2)}`).join(' ')} ${[...forecastRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.lower_bound).toFixed(2)}`).join(' ')} Z` : '';
         const scenarioBand = scenarioRows.length ? `${scenarioRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_upper).toFixed(2)}`).join(' ')} ${[...scenarioRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_lower).toFixed(2)}`).join(' ')} Z` : '';
+        const crowdBand = crowdRows.length ? `${crowdRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_upper).toFixed(2)}`).join(' ')} ${[...crowdRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_lower).toFixed(2)}`).join(' ')} Z` : '';
         const forecastPoints = forecastRows.map((point) => `<circle class="${simulationActive ? 'baseline-point' : 'forecast-point'}" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point).toFixed(2)}" r="4" data-kind="AI baseline" data-date="${point.date}" data-price="${point.predicted_price}" data-lower="${point.lower_bound}" data-upper="${point.upper_bound}" />`).join('');
         const scenarioPoints = scenarioRows.map((point) => `<circle class="scenario-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point, point.scenario_price).toFixed(2)}" r="4" data-kind="Simulated scenario" data-date="${point.date}" data-price="${point.scenario_price}" data-lower="${point.scenario_lower}" data-upper="${point.scenario_upper}" data-sentiment="${state.scenarioScore}" />`).join('');
-        const divider = forecastRows.length ? `<line class="${simulationActive ? 'simulation-divider' : 'forecast-divider'}" x1="${xFor(rows.at(-1))}" y1="${top}" x2="${xFor(rows.at(-1))}" y2="${top + plotH}" /><text class="${simulationActive ? 'simulation-label' : 'forecast-label'}" x="${xFor(rows.at(-1)) + 5}" y="${top + 12}">${simulationActive ? 'Simulation starts' : 'Forecast begins'}</text>` : '';
+        const crowdBaselinePoints = crowdRows.map((point) => `<circle class="crowd-baseline-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point, point.predicted_price).toFixed(2)}" r="4" data-kind="AI baseline" data-date="${point.date}" data-price="${point.predicted_price}" data-lower="${point.lower_bound}" data-upper="${point.upper_bound}" />`).join('');
+        const crowdScenarioPoints = crowdRows.map((point) => `<circle class="crowd-scenario-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point, point.scenario_price).toFixed(2)}" r="4" data-kind="Crowd-informed forecast" data-date="${point.date}" data-price="${point.scenario_price}" data-lower="${point.scenario_lower}" data-upper="${point.scenario_upper}" data-sentiment="${crowdMedianScore()}" />`).join('');
+        const divider = futureRows.length ? `<line class="${crowdActive ? 'crowd-divider' : simulationActive ? 'simulation-divider' : 'forecast-divider'}" x1="${xFor(rows.at(-1))}" y1="${top}" x2="${xFor(rows.at(-1))}" y2="${top + plotH}" /><text class="${crowdActive ? 'crowd-label' : simulationActive ? 'simulation-label' : 'forecast-label'}" x="${xFor(rows.at(-1)) + 5}" y="${top + 12}">${crowdActive ? (crowdForecastVisible ? 'Crowd forecast begins' : 'Forecast after voting') : simulationActive ? 'Simulation starts' : 'Forecast begins'}</text>` : '';
         const actualPath = simulationActive ? `<path class="observed-line" d="${line}" />` : `<path class="price-line" d="${line}" />`;
         const futurePath = simulationActive
           ? `${forecastLine ? `<path class="baseline-line" d="${forecastLine}" />` : ''}${scenarioLine ? `<path class="scenario-line" d="${scenarioLine}" />` : ''}`
+          : crowdActive && crowdForecastVisible
+            ? `${crowdBaselineLine ? `<path class="crowd-baseline-line" d="${crowdBaselineLine}" />` : ''}${crowdForecastLine ? `<path class="crowd-forecast-line" d="${crowdForecastLine}" />` : ''}`
           : `${forecastLine ? `<path class="forecast-line" d="${forecastLine}" />` : ''}`;
         const bandPath = simulationActive
           ? (scenarioBand ? `<path class="scenario-band" d="${scenarioBand}" />` : '')
+          : crowdActive && crowdForecastVisible
+            ? (crowdBand ? `<path class="crowd-band" d="${crowdBand}" />` : '')
           : (forecastBand ? `<path class="forecast-band" d="${forecastBand}" />` : '');
-        svg.innerHTML = `${grid}${labels}${bandPath}${divider}${actualPath}${futurePath}${points}${simulationActive ? scenarioPoints : ''}${forecastPoints}`;
-        svg.querySelectorAll('.price-point, .forecast-point, .baseline-point, .scenario-point').forEach((point) => {
+        svg.innerHTML = `${grid}${labels}${bandPath}${divider}${actualPath}${futurePath}${points}${simulationActive ? scenarioPoints : ''}${crowdActive && crowdForecastVisible ? `${crowdBaselinePoints}${crowdScenarioPoints}` : ''}${forecastPoints}`;
+        svg.querySelectorAll('.price-point, .forecast-point, .baseline-point, .scenario-point, .crowd-baseline-point, .crowd-scenario-point').forEach((point) => {
           const show = () => {
             const rect = $('chartWrap').getBoundingClientRect();
             const pointRect = point.getBoundingClientRect();
             const price = Number(point.dataset.price);
             const kind = point.dataset.kind || 'Secondary market';
-            const isFuture = point.classList.contains('forecast-point') || point.classList.contains('baseline-point') || point.classList.contains('scenario-point');
+            const isFuture = point.classList.contains('forecast-point') || point.classList.contains('baseline-point') || point.classList.contains('scenario-point') || point.classList.contains('crowd-baseline-point') || point.classList.contains('crowd-scenario-point');
             const range = isFuture ? `<br />Range: ${esc(formatPrice(market, Number(point.dataset.lower)))}–${esc(formatPrice(market, Number(point.dataset.upper)))}` : '';
-            const sentiment = point.classList.contains('scenario-point') ? `<br />Scenario sentiment ${esc(formatSigned(state.scenarioScore))}` : '';
+            const sentiment = point.classList.contains('scenario-point') ? `<br />Scenario sentiment ${esc(formatSigned(state.scenarioScore))}` : point.classList.contains('crowd-scenario-point') ? `<br />Crowd sentiment ${esc(crowdScoreLabel(crowdMedianScore()))}` : '';
             $('chartTooltip').innerHTML = `<strong>${esc(formatPrice(market, price))}</strong><span>${esc(formatDate(point.dataset.date))}<br />${market.name} · ${esc(kind)}${range}${sentiment}</span>`;
             $('chartTooltip').style.left = `${Math.max(8, Math.min(rect.width - 165, pointRect.left - rect.left - 75))}px`;
             $('chartTooltip').style.top = `${Math.max(8, pointRect.top - rect.top - 74)}px`;
@@ -793,7 +1108,15 @@
         });
         const first = rows[0].price, last = rows.at(-1).price, delta = last - first, pct = first ? delta / first * 100 : 0;
         $('latestPrice').textContent = formatPrice(market, last);
-        if (simulationActive && scenarioRows.length) {
+        if (crowdActive && crowdForecastVisible && crowdRows.length) {
+          const crowdDelta = crowdRows.at(-1).scenario_price - last;
+          const crowdPct = last ? crowdDelta / last * 100 : 0;
+          $('priceChange').textContent = `Crowd forecast ${crowdDelta >= 0 ? '+' : ''}${formatPrice(market, crowdDelta)} (${crowdPct >= 0 ? '+' : ''}${crowdPct.toFixed(2)}%) over 14 days`;
+          $('priceChange').className = `price-change ${crowdDelta > 0 ? 'positive' : crowdDelta < 0 ? 'negative' : 'neutral'}`;
+        } else if (crowdActive) {
+          $('priceChange').textContent = 'Crowd forecast after voting';
+          $('priceChange').className = 'price-change neutral';
+        } else if (simulationActive && scenarioRows.length) {
           const scenarioDelta = scenarioRows.at(-1).scenario_price - last;
           const scenarioPct = last ? scenarioDelta / last * 100 : 0;
           $('priceChange').textContent = `Scenario ${scenarioDelta >= 0 ? '+' : ''}${formatPrice(market, scenarioDelta)} (${scenarioPct >= 0 ? '+' : ''}${scenarioPct.toFixed(2)}%) over 14 days`;
@@ -802,24 +1125,48 @@
           $('priceChange').textContent = `${delta >= 0 ? '+' : ''}${formatPrice(market, delta)} (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%) over selected range`;
           $('priceChange').className = `price-change ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral'}`;
         }
-        $('observationText').textContent = `${rows.length.toLocaleString()} observations${forecastRows.length ? ` · ${forecastRows.length}-day ${simulationActive ? 'scenario' : 'AI forecast'}` : ''}`;
+        $('observationText').textContent = `${rows.length.toLocaleString()} observations${crowdActive && crowdForecastVisible ? ` · ${crowdRows.length}-day crowd forecast` : forecastRows.length ? ` · ${forecastRows.length}-day ${simulationActive ? 'scenario' : 'AI forecast'}` : ''}`;
         updateSimulationPanel(market, rows, forecast);
       }
 
       function setDashboardMode(mode) {
-        state.mode = mode === 'simulation' ? 'simulation' : 'market';
+        const nextMode = mode === 'simulation' || mode === 'crowd' ? mode : 'market';
+        const enteringCrowd = nextMode === 'crowd' && state.mode !== 'crowd';
+        state.mode = nextMode;
         const simulationActive = state.mode === 'simulation';
-        $('summaryPanel').hidden = simulationActive;
+        const crowdActive = state.mode === 'crowd';
+        if (!crowdActive && state.crowdSyncTimer) {
+          window.clearInterval(state.crowdSyncTimer);
+          state.crowdSyncTimer = null;
+        }
+        if (enteringCrowd) {
+          state.crowdKey = '';
+          state.crowdSessionStatus = 'waiting';
+          state.crowdVotingClosed = false;
+          state.crowdForecastGenerated = false;
+          state.crowdVotes = [0, 0, 0, 0, 0];
+          state.participantScenarioIndex = 0;
+          state.forecast = null;
+        }
+        document.body.classList.toggle('crowd-mode-active', crowdActive);
+        $('summaryPanel').hidden = simulationActive || crowdActive;
         $('simulationPanel').hidden = !simulationActive;
-        $('marketLegend').hidden = simulationActive;
+        $('crowdPanel').hidden = !crowdActive;
+        $('crowdSessionStrip').hidden = !crowdActive;
+        $('marketNewsPanel').hidden = crowdActive;
+        $('marketLegend').hidden = simulationActive || crowdActive;
         $('simulationLegend').hidden = !simulationActive;
-        $('marketViewMode').classList.toggle('active', !simulationActive);
+        $('crowdLegend').hidden = !crowdActive;
+        $('marketViewMode').classList.toggle('active', !simulationActive && !crowdActive);
         $('simulationMode').classList.toggle('active', simulationActive);
-        $('marketViewMode').setAttribute('aria-selected', String(!simulationActive));
+        $('crowdMode').classList.toggle('active', crowdActive);
+        $('marketViewMode').setAttribute('aria-selected', String(!simulationActive && !crowdActive));
         $('simulationMode').setAttribute('aria-selected', String(simulationActive));
+        $('crowdMode').setAttribute('aria-selected', String(crowdActive));
         const market = currentMarket();
         const rows = market.rows.filter((row) => row.date >= state.start && row.date <= state.end);
-        if (!simulationActive) renderForecastSummary(state.forecast, market);
+        if (crowdActive) renderCrowdSession(market);
+        if (!simulationActive && !crowdActive) renderForecastSummary(state.forecast, market);
         drawChart(market, rows, state.forecast);
       }
 
@@ -830,6 +1177,106 @@
         const rows = market.rows.filter((row) => row.date >= state.start && row.date <= state.end);
         updateSimulationPanel(market, rows, state.forecast);
         if (state.mode === 'simulation') drawChart(market, rows, state.forecast);
+      }
+
+      async function startCrowdSession() {
+        if (state.mode !== 'crowd') setDashboardMode('crowd');
+        state.crowdVotingClosed = false;
+        state.crowdForecastGenerated = false;
+        state.crowdVotes = [0, 0, 0, 0, 0];
+        $('crowdScoreLabel').textContent = 'Median score';
+        $('closeVoting').disabled = false;
+        $('generateCrowdForecast').disabled = true;
+        setCrowdSessionState('live');
+        updateCrowdVoteChart();
+        await syncCrowdSession(true);
+        startCrowdPolling();
+      }
+
+      async function closeCrowdVoting() {
+        if (state.crowdSessionStatus !== 'live') return;
+        state.crowdVotingClosed = true;
+        $('crowdScoreLabel').textContent = 'Final crowd score';
+        $('closeVoting').disabled = true;
+        $('generateCrowdForecast').disabled = false;
+        setCrowdSessionState('closed');
+        updateCrowdVoteChart();
+        if (state.crowdRemote) {
+          try {
+            const response = await fetch('/api/crowd/close', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: state.crowdSessionId }) });
+            const snapshot = await response.json();
+            if (response.ok) applyCrowdSnapshot(snapshot);
+          } catch (error) { /* Keep the local final distribution visible. */ }
+        }
+      }
+
+      async function generateCrowdForecast() {
+        if (!state.crowdVotingClosed) return;
+        const market = currentMarket();
+        const rows = market.rows.filter((row) => row.date >= state.start && row.date <= state.end);
+        const total = state.crowdVotes.reduce((sum, count) => sum + count, 0);
+        const positive = total ? (state.crowdVotes[3] + state.crowdVotes[4]) / total : 0;
+        const neutral = total ? state.crowdVotes[2] / total : 0;
+        const negative = total ? (state.crowdVotes[0] + state.crowdVotes[1]) / total : 0;
+        const payload = { market: market.id, prices: rows.slice(-60).map((row) => ({ date: row.date, price: row.price })), daily_sentiment: [{ date: state.end, median_score: crowdMedianScore(), positive_share: positive, neutral_share: neutral, negative_share: negative, news_count: total }], horizon_days: 14 };
+        try {
+          const response = await fetch('/api/forecast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const result = await response.json();
+          state.forecast = result?.ok && result.forecast?.length ? result : null;
+        } catch (error) {
+          state.forecast = null;
+        }
+        state.crowdForecastGenerated = true;
+        $('generateCrowdForecast').textContent = 'Forecast generated';
+        $('generateCrowdForecast').disabled = true;
+        drawChart(market, rows, state.forecast);
+      }
+
+      function openParticipantView() {
+        if (state.mode !== 'crowd') setDashboardMode('crowd');
+        if (joinMode) {
+          syncCrowdSession();
+        } else if (state.crowdSessionStatus === 'waiting') {
+          startCrowdSession();
+        }
+        updateParticipantScenario();
+        $('participantView').hidden = false;
+        document.body.classList.add('participant-open');
+        window.scrollTo(0, 0);
+      }
+
+      function closeParticipantView() {
+        $('participantView').hidden = true;
+        document.body.classList.remove('participant-open');
+      }
+
+      async function submitParticipantVote() {
+        if (state.participantVote === null) return;
+        if (state.crowdRemote && state.crowdSessionStatus !== 'live') return;
+        if (joinMode && !state.crowdRemote) {
+          await syncCrowdSession();
+          if (state.crowdSessionStatus !== 'live') return;
+        }
+        const index = Math.max(0, Math.min(CROWD_SCORE_VALUES.length - 1, Math.round((Number(state.participantVote) + 1) * 2)));
+        if (state.crowdRemote) {
+          try {
+            const response = await fetch('/api/crowd/vote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: state.crowdSessionId, score: Number(state.participantVote) }) });
+            const snapshot = await response.json();
+            if (!response.ok) return;
+            applyCrowdSnapshot(snapshot);
+          } catch (error) { return; }
+        } else {
+          state.crowdVotes[index] += 1;
+          updateCrowdVoteChart(index);
+        }
+        $('participantConfirmation').classList.add('visible');
+        $('nextParticipantScenario').style.display = 'block';
+        $('submitParticipantVote').disabled = true;
+      }
+
+      function nextParticipantScenario() {
+        state.participantScenarioIndex = (state.participantScenarioIndex + 1) % Math.max(1, state.crowdScenarios.length);
+        updateParticipantScenario();
       }
 
       function render(forceGdelt = false) {
@@ -847,9 +1294,10 @@
         $('priceUnit').textContent = `per tCO₂e · ${market.currency}`;
         $('previousMarket').disabled = state.selected.length < 2;
         $('nextMarket').disabled = state.selected.length < 2;
+        if (state.mode === 'crowd') renderCrowdSession(market);
         drawChart(market, rows, state.forecast);
         renderMarketOptions();
-        loadNews(forceGdelt);
+        if (state.mode !== 'crowd') loadNews(forceGdelt);
       }
 
       $('startDate').addEventListener('change', (event) => { state.start = event.target.value; if (state.start > state.end) state.end = state.start; normalizeDates(); render(); });
@@ -859,17 +1307,36 @@
       $('refreshButton').addEventListener('click', () => { $('statusText').textContent = 'Refreshing…'; render(true); });
       $('marketViewMode').addEventListener('click', () => setDashboardMode('market'));
       $('simulationMode').addEventListener('click', () => setDashboardMode('simulation'));
+      $('crowdMode').addEventListener('click', () => setDashboardMode('crowd'));
       $('scenarioSentiment').addEventListener('input', (event) => updateScenarioScore(event.target.value));
       document.querySelectorAll('[data-scenario-score]').forEach((button) => button.addEventListener('click', () => {
         const value = button.dataset.scenarioScore === 'observed' ? state.observedSentiment : button.dataset.scenarioScore;
         updateScenarioScore(value);
       }));
+      $('startSession').addEventListener('click', startCrowdSession);
+      $('closeVoting').addEventListener('click', closeCrowdVoting);
+      $('generateCrowdForecast').addEventListener('click', generateCrowdForecast);
+      $('openParticipant').addEventListener('click', openParticipantView);
+      $('closeParticipant').addEventListener('click', closeParticipantView);
+      $('nextParticipantScenario').addEventListener('click', nextParticipantScenario);
+      $('submitParticipantVote').addEventListener('click', submitParticipantVote);
+      document.querySelectorAll('.participant-option').forEach((button) => button.addEventListener('click', () => {
+        state.participantVote = Number(button.dataset.vote);
+        document.querySelectorAll('.participant-option').forEach((other) => other.classList.toggle('selected', other === button));
+        $('submitParticipantVote').disabled = false;
+      }));
 
       normalizeDates(true);
+      if (joinMode) {
+        if (joinParams.get('start')) state.start = joinParams.get('start');
+        if (joinParams.get('end')) state.end = joinParams.get('end');
+        normalizeDates();
+      }
       setupNewsFilters();
       renderMarketOptions();
-      setDashboardMode('market');
+      setDashboardMode(joinMode ? 'crowd' : 'market');
       render();
+      if (joinMode) openParticipantView();
     })();
   </script>
 </body>

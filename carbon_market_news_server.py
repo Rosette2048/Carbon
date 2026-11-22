@@ -67,6 +67,9 @@ _forecast_cache: dict[str, tuple[float, dict]] = {}
 _forecast_cache_lock = threading.Lock()
 _gdelt_request_lock = threading.Lock()
 _gdelt_next_request_at = 0.0
+CROWD_SESSION_TTL_SECONDS = 6 * 60 * 60
+_crowd_sessions: dict[str, dict] = {}
+_crowd_sessions_lock = threading.Lock()
 FACTIVA_PATH = Path(__file__).with_name("carbon_market_factiva_news.json")
 try:
     FACTIVA_PAYLOAD = json.loads(FACTIVA_PATH.read_text(encoding="utf-8"))
@@ -85,6 +88,28 @@ def json_response(handler: SimpleHTTPRequestHandler, payload: dict, status: int 
     handler.send_header("Content-Length", str(len(body)))
     handler.end_headers()
     handler.wfile.write(body)
+
+
+def _prune_crowd_sessions_locked() -> None:
+    cutoff = time.time() - CROWD_SESSION_TTL_SECONDS
+    stale = [key for key, value in _crowd_sessions.items() if value.get("updated_at", 0) < cutoff]
+    for key in stale:
+        _crowd_sessions.pop(key, None)
+
+
+def _crowd_snapshot(session_id: str, session: dict) -> dict:
+    votes = list(session.get("votes", [0, 0, 0, 0, 0]))
+    return {
+        "ok": True,
+        "session": session_id,
+        "market": session.get("market", ""),
+        "start": session.get("start", ""),
+        "end": session.get("end", ""),
+        "status": session.get("status", "waiting"),
+        "votes": votes,
+        "total_votes": sum(votes),
+        "updated_at": datetime.fromtimestamp(session.get("updated_at", time.time()), timezone.utc).isoformat(),
+    }
 
 
 def parse_json_text(value: str) -> dict | list:
@@ -693,7 +718,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.request_authentication()
             return
         path = urlparse(self.path).path
-        if path not in {"/api/sentiment", "/api/forecast"}:
+        if path not in {"/api/sentiment", "/api/forecast", "/api/crowd/session", "/api/crowd/vote", "/api/crowd/close"}:
             self.send_error(404, "Not Found")
             return
         try:
@@ -704,8 +729,66 @@ class Handler(SimpleHTTPRequestHandler):
             if not isinstance(payload, dict):
                 raise ValueError("request body must be a JSON object")
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            error_payload = {"ok": False, "message": str(exc), "forecast": []} if path == "/api/forecast" else {"ok": False, "message": str(exc), "scores": {}, "metrics": sentiment_metrics([])}
+            if path == "/api/forecast":
+                error_payload = {"ok": False, "message": str(exc), "forecast": []}
+            elif path == "/api/sentiment":
+                error_payload = {"ok": False, "message": str(exc), "scores": {}, "metrics": sentiment_metrics([])}
+            else:
+                error_payload = {"ok": False, "message": str(exc)}
             json_response(self, error_payload, 400)
+            return
+        if path == "/api/crowd/session":
+            session_id = re.sub(r"[^A-Za-z0-9_-]", "", str(payload.get("session", "")))[:64]
+            market = str(payload.get("market", ""))[:40]
+            start = str(payload.get("start", ""))[:10]
+            end = str(payload.get("end", ""))[:10]
+            if not session_id or not market or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end):
+                json_response(self, {"ok": False, "message": "session, market, start and end are required"}, 400)
+                return
+            with _crowd_sessions_lock:
+                _prune_crowd_sessions_locked()
+                session = _crowd_sessions.setdefault(session_id, {"market": market, "start": start, "end": end, "status": "waiting", "votes": [0, 0, 0, 0, 0], "updated_at": time.time()})
+                if payload.get("reset"):
+                    session["votes"] = [0, 0, 0, 0, 0]
+                session.update({"market": market, "start": start, "end": end, "status": "live", "updated_at": time.time()})
+                snapshot = _crowd_snapshot(session_id, session)
+            json_response(self, snapshot, 200)
+            return
+        if path == "/api/crowd/vote":
+            session_id = re.sub(r"[^A-Za-z0-9_-]", "", str(payload.get("session", "")))[:64]
+            score = payload.get("score")
+            score_to_index = {-1: 0, -0.5: 1, 0: 2, 0.5: 3, 1: 4}
+            try:
+                vote_index = score_to_index[float(score)]
+            except (KeyError, TypeError, ValueError):
+                json_response(self, {"ok": False, "message": "score must be one of -1, -0.5, 0, 0.5 or 1"}, 400)
+                return
+            with _crowd_sessions_lock:
+                _prune_crowd_sessions_locked()
+                session = _crowd_sessions.get(session_id)
+                if not session:
+                    json_response(self, {"ok": False, "message": "session not found"}, 404)
+                    return
+                if session.get("status") != "live":
+                    json_response(self, {"ok": False, "message": "voting is closed"}, 409)
+                    return
+                session["votes"][vote_index] += 1
+                session["updated_at"] = time.time()
+                snapshot = _crowd_snapshot(session_id, session)
+            json_response(self, snapshot, 200)
+            return
+        if path == "/api/crowd/close":
+            session_id = re.sub(r"[^A-Za-z0-9_-]", "", str(payload.get("session", "")))[:64]
+            with _crowd_sessions_lock:
+                _prune_crowd_sessions_locked()
+                session = _crowd_sessions.get(session_id)
+                if not session:
+                    json_response(self, {"ok": False, "message": "session not found"}, 404)
+                    return
+                session["status"] = "closed"
+                session["updated_at"] = time.time()
+                snapshot = _crowd_snapshot(session_id, session)
+            json_response(self, snapshot, 200)
             return
         if path == "/api/sentiment":
             articles = payload.get("articles", [])
@@ -745,6 +828,20 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             result = fetch_combined_news(market, start, end, category, force_gdelt=force_gdelt)
             json_response(self, result, 200 if result.get("ok") else 422)
+            return
+        if parsed.path == "/api/crowd/session":
+            session_id = re.sub(r"[^A-Za-z0-9_-]", "", parse_qs(parsed.query).get("session", [""])[0])[:64]
+            if not session_id:
+                json_response(self, {"ok": False, "message": "session is required"}, 400)
+                return
+            with _crowd_sessions_lock:
+                _prune_crowd_sessions_locked()
+                session = _crowd_sessions.get(session_id)
+                if not session:
+                    json_response(self, {"ok": False, "message": "session not found"}, 404)
+                    return
+                snapshot = _crowd_snapshot(session_id, session)
+            json_response(self, snapshot, 200)
             return
         if parsed.path not in PUBLIC_FILES:
             self.send_error(404, "Not Found")
