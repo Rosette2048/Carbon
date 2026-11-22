@@ -396,7 +396,7 @@
           <div class="chart-wrap" id="chartWrap"><svg id="priceChart" viewBox="0 0 800 300" role="img" aria-label="Carbon price chart"></svg><div class="chart-empty" id="chartEmpty" hidden>No price observations in this date range.</div><div class="tooltip" id="chartTooltip"></div></div>
           <div class="chart-legend" id="marketLegend"><span><i class="line-key"></i>Actual price</span><span><i class="line-key forecast"></i>AI forecast</span></div>
           <div class="chart-legend" id="simulationLegend" hidden><span><i class="line-key observed"></i>Observed price</span><span><i class="line-key baseline"></i>AI baseline</span><span><i class="line-key scenario"></i>Simulated scenario</span></div>
-          <div class="crowd-legend" id="crowdLegend" hidden><span><i class="line-key crowd-observed"></i>Observed price</span><span><i class="line-key crowd-baseline"></i>AI baseline</span><span><i class="line-key crowd-forecast"></i>Demo crowd-informed forecast</span></div>
+          <div class="crowd-legend" id="crowdLegend" hidden><span><i class="line-key crowd-observed"></i>Observed price</span><span><i class="line-key crowd-forecast"></i>Demo crowd-informed forecast</span></div>
           <div class="price-footer"><span><strong>Secondary / daily</strong> · ICAP snapshot from carbon_task1</span><span id="observationText">— observations</span></div>
         </section>
 
@@ -1062,7 +1062,7 @@
         const forecastValues = simulationActive
           ? scenarioRows.flatMap((point) => [point.scenario_price, point.scenario_lower, point.scenario_upper, point.predicted_price])
           : crowdActive
-            ? (crowdForecastVisible ? crowdRows.flatMap((point) => [point.scenario_price, point.scenario_lower, point.scenario_upper, point.predicted_price]) : [])
+            ? (crowdForecastVisible ? crowdRows.flatMap((point) => [point.scenario_price, point.scenario_lower, point.scenario_upper]) : [])
             : forecastRows.flatMap((point) => [point.predicted_price, point.lower_bound, point.upper_bound]);
         const values = [...rows.map((row) => row.price), ...forecastValues];
         const min = Math.min(...values), max = Math.max(...values);
@@ -1095,35 +1095,33 @@
         const pathFor = (items, valueKey = null) => items.length ? items.map((row, index) => `${index ? 'L' : 'M'} ${xFor(row).toFixed(2)} ${yFor(row, valueKey ? row[valueKey] : undefined).toFixed(2)}`).join(' ') : '';
         const forecastLine = forecastRows.length ? pathFor([rows.at(-1), ...forecastRows]) : '';
         const scenarioLine = scenarioRows.length ? pathFor([rows.at(-1), ...scenarioRows], 'scenario_price') : '';
-        const crowdBaselineLine = crowdRows.length ? pathFor([rows.at(-1), ...crowdRows], 'predicted_price') : '';
         const crowdForecastLine = crowdRows.length ? pathFor([rows.at(-1), ...crowdRows], 'scenario_price') : '';
         const forecastBand = forecastRows.length ? `${forecastRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.upper_bound).toFixed(2)}`).join(' ')} ${[...forecastRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.lower_bound).toFixed(2)}`).join(' ')} Z` : '';
         const scenarioBand = scenarioRows.length ? `${scenarioRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_upper).toFixed(2)}`).join(' ')} ${[...scenarioRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_lower).toFixed(2)}`).join(' ')} Z` : '';
         const crowdBand = crowdRows.length ? `${crowdRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_upper).toFixed(2)}`).join(' ')} ${[...crowdRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_lower).toFixed(2)}`).join(' ')} Z` : '';
         const forecastPoints = !crowdActive && forecastRows.map((point) => `<circle class="${simulationActive ? 'baseline-point' : 'forecast-point'}" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point).toFixed(2)}" r="4" data-kind="AI baseline" data-date="${point.date}" data-price="${point.predicted_price}" data-lower="${point.lower_bound}" data-upper="${point.upper_bound}" />`).join('');
         const scenarioPoints = scenarioRows.map((point) => `<circle class="scenario-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point, point.scenario_price).toFixed(2)}" r="4" data-kind="Simulated scenario" data-date="${point.date}" data-price="${point.scenario_price}" data-lower="${point.scenario_lower}" data-upper="${point.scenario_upper}" data-sentiment="${state.scenarioScore}" />`).join('');
-        const crowdBaselinePoints = crowdRows.map((point) => `<circle class="crowd-baseline-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point, point.predicted_price).toFixed(2)}" r="4" data-kind="AI baseline" data-date="${point.date}" data-price="${point.predicted_price}" data-lower="${point.lower_bound}" data-upper="${point.upper_bound}" />`).join('');
         const crowdScenarioPoints = crowdRows.map((point) => `<circle class="crowd-scenario-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point, point.scenario_price).toFixed(2)}" r="4" data-kind="Crowd-informed forecast" data-date="${point.date}" data-price="${point.scenario_price}" data-lower="${point.scenario_lower}" data-upper="${point.scenario_upper}" data-sentiment="${crowdMedianScore()}" />`).join('');
         const divider = futureRows.length ? `<line class="${crowdActive ? 'crowd-divider' : simulationActive ? 'simulation-divider' : 'forecast-divider'}" x1="${xFor(rows.at(-1))}" y1="${top}" x2="${xFor(rows.at(-1))}" y2="${top + plotH}" /><text class="${crowdActive ? 'crowd-label' : simulationActive ? 'simulation-label' : 'forecast-label'}" x="${xFor(rows.at(-1)) + 5}" y="${top + 12}">${crowdActive ? (crowdForecastVisible ? 'Crowd forecast begins' : 'Forecast after voting') : simulationActive ? 'Simulation starts' : 'Forecast begins'}</text>` : '';
         const actualPath = simulationActive ? `<path class="observed-line" d="${line}" />` : `<path class="price-line" d="${line}" />`;
         const futurePath = simulationActive
           ? `${forecastLine ? `<path class="baseline-line" d="${forecastLine}" />` : ''}${scenarioLine ? `<path class="scenario-line" d="${scenarioLine}" />` : ''}`
           : crowdActive && crowdForecastVisible
-            ? `${crowdBaselineLine ? `<path class="crowd-baseline-line" d="${crowdBaselineLine}" />` : ''}${crowdForecastLine ? `<path class="crowd-forecast-line" d="${crowdForecastLine}" />` : ''}`
+            ? `${crowdForecastLine ? `<path class="crowd-forecast-line" d="${crowdForecastLine}" />` : ''}`
           : crowdActive ? '' : `${forecastLine ? `<path class="forecast-line" d="${forecastLine}" />` : ''}`;
         const bandPath = simulationActive
           ? (scenarioBand ? `<path class="scenario-band" d="${scenarioBand}" />` : '')
           : crowdActive
             ? (crowdForecastVisible && crowdBand ? `<path class="crowd-band" d="${crowdBand}" />` : '')
             : (forecastBand ? `<path class="forecast-band" d="${forecastBand}" />` : '');
-        svg.innerHTML = `${grid}${labels}${bandPath}${divider}${actualPath}${futurePath}${points}${simulationActive ? scenarioPoints : ''}${crowdActive && crowdForecastVisible ? `${crowdBaselinePoints}${crowdScenarioPoints}` : ''}${forecastPoints}`;
-        svg.querySelectorAll('.price-point, .forecast-point, .baseline-point, .scenario-point, .crowd-baseline-point, .crowd-scenario-point').forEach((point) => {
+        svg.innerHTML = `${grid}${labels}${bandPath}${divider}${actualPath}${futurePath}${points}${simulationActive ? scenarioPoints : ''}${crowdActive && crowdForecastVisible ? crowdScenarioPoints : ''}${forecastPoints}`;
+        svg.querySelectorAll('.price-point, .forecast-point, .baseline-point, .scenario-point, .crowd-scenario-point').forEach((point) => {
           const show = () => {
             const rect = $('chartWrap').getBoundingClientRect();
             const pointRect = point.getBoundingClientRect();
             const price = Number(point.dataset.price);
             const kind = point.dataset.kind || 'Secondary market';
-            const isFuture = point.classList.contains('forecast-point') || point.classList.contains('baseline-point') || point.classList.contains('scenario-point') || point.classList.contains('crowd-baseline-point') || point.classList.contains('crowd-scenario-point');
+            const isFuture = point.classList.contains('forecast-point') || point.classList.contains('baseline-point') || point.classList.contains('scenario-point') || point.classList.contains('crowd-scenario-point');
             const range = isFuture ? `<br />Range: ${esc(formatPrice(market, Number(point.dataset.lower)))}–${esc(formatPrice(market, Number(point.dataset.upper)))}` : '';
             const sentiment = point.classList.contains('scenario-point') ? `<br />Scenario sentiment ${esc(formatSigned(state.scenarioScore))}` : point.classList.contains('crowd-scenario-point') ? `<br />Crowd sentiment ${esc(crowdScoreLabel(crowdMedianScore()))}` : '';
             $('chartTooltip').innerHTML = `<strong>${esc(formatPrice(market, price))}</strong><span>${esc(formatDate(point.dataset.date))}<br />${market.name} · ${esc(kind)}${range}${sentiment}</span>`;
