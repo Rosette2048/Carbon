@@ -106,6 +106,7 @@ def _crowd_snapshot(session_id: str, session: dict) -> dict:
         "start": session.get("start", ""),
         "end": session.get("end", ""),
         "status": session.get("status", "waiting"),
+        "scenario_index": int(session.get("scenario_index", 0)),
         "votes": votes,
         "total_votes": sum(votes),
         "updated_at": datetime.fromtimestamp(session.get("updated_at", time.time()), timezone.utc).isoformat(),
@@ -742,15 +743,20 @@ class Handler(SimpleHTTPRequestHandler):
             market = str(payload.get("market", ""))[:40]
             start = str(payload.get("start", ""))[:10]
             end = str(payload.get("end", ""))[:10]
+            try:
+                scenario_index = max(0, min(3, int(payload.get("scenario_index", 0))))
+            except (TypeError, ValueError):
+                scenario_index = 0
             if not session_id or not market or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end):
                 json_response(self, {"ok": False, "message": "session, market, start and end are required"}, 400)
                 return
             with _crowd_sessions_lock:
                 _prune_crowd_sessions_locked()
-                session = _crowd_sessions.setdefault(session_id, {"market": market, "start": start, "end": end, "status": "waiting", "votes": [0, 0, 0, 0, 0], "updated_at": time.time()})
+                session = _crowd_sessions.setdefault(session_id, {"market": market, "start": start, "end": end, "status": "waiting", "scenario_index": scenario_index, "votes": [0, 0, 0, 0, 0], "updated_at": time.time()})
                 if payload.get("reset"):
                     session["votes"] = [0, 0, 0, 0, 0]
-                session.update({"market": market, "start": start, "end": end, "status": "live", "updated_at": time.time()})
+                    session["scenario_index"] = scenario_index
+                session.update({"market": market, "start": start, "end": end, "status": "live", "scenario_index": scenario_index, "updated_at": time.time()})
                 snapshot = _crowd_snapshot(session_id, session)
             json_response(self, snapshot, 200)
             return

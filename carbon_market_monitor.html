@@ -190,6 +190,8 @@
     .crowd-panel { min-height: 560px; padding: 12px 15px; }
     .crowd-panel-subtitle { margin-top: 4px; color: var(--muted); font-size: 9px; }
     .crowd-news-scroll { height: 148px; margin-top: 10px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; scrollbar-color: var(--line) transparent; }
+    .crowd-empty-state { min-height: 116px; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 14px; color: var(--muted); font-size: 9px; line-height: 1.35; }
+    .crowd-empty-state strong { color: var(--ink); font-size: 10px; }
     .synthetic-card { padding: 9px 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
     .synthetic-card:last-child { border-bottom: 0; }
     .synthetic-card-head { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
@@ -451,7 +453,7 @@
           <div class="crowd-news-scroll" id="crowdNewsList"></div>
           <div class="crowd-join-row"><img class="crowd-qr" id="crowdQr" alt="QR code to join the crowd sentiment session" /><div class="crowd-join-copy"><strong>Join from a phone</strong><span>Scan to vote on each scenario</span><div class="join-link" id="crowdJoinLink">—</div><button id="openParticipant" class="secondary-action" type="button">Open participant view</button></div></div>
           <div class="crowd-session-meta"><div><span>Participants</span><strong id="crowdParticipantCount">0</strong></div><div><span>Session code</span><strong id="crowdSessionCode">—</strong></div><div><span>Voting status</span><strong id="crowdVotingLabel">Waiting</strong></div></div>
-          <div class="crowd-vote-panel"><div class="crowd-vote-head"><strong>Live vote distribution</strong><span id="crowdVoteStatus">Waiting for session</span></div><div id="voteChart" class="vote-chart" aria-label="Live crowd vote distribution"><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Strongly<br />bearish</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Bearish</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Neutral</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Bullish</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Strongly<br />bullish</span></div></div><div class="crowd-metrics"><div class="crowd-metric"><span>Total votes</span><strong id="crowdTotalVotes">0</strong></div><div class="crowd-metric"><span id="crowdScoreLabel">Median score</span><strong id="crowdMedianScore">—</strong></div><div class="crowd-metric"><span>Positive share</span><strong id="crowdPositiveShare">—</strong></div><div class="crowd-metric"><span>Neutral share</span><strong id="crowdNeutralShare">—</strong></div><div class="crowd-metric"><span>Negative share</span><strong id="crowdNegativeShare">—</strong></div><div class="crowd-metric"><span>Confidence</span><strong id="crowdConfidence">—</strong></div></div><div class="crowd-actions"><button id="closeVoting" class="secondary-action" type="button" disabled>Close Voting</button><button id="generateCrowdForecast" class="primary-action" type="button" disabled>Generate Forecast</button></div><p class="crowd-method">Final crowd sentiment and recent price history are sent to HKU GenAI when configured; the chart keeps a transparent fallback path for demonstration. Synthetic scenarios are not real news.</p></div>
+          <div class="crowd-vote-panel" id="crowdVotePanel" hidden><div class="crowd-vote-head"><strong>Live vote distribution</strong><span id="crowdVoteStatus">Waiting for session</span></div><div id="voteChart" class="vote-chart" aria-label="Live crowd vote distribution"><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Strongly<br />bearish</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Bearish</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Neutral</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Bullish</span></div><div class="vote-column"><span class="vote-count">0</span><div class="vote-bar-track"><i class="vote-bar-fill"></i></div><span class="vote-label">Strongly<br />bullish</span></div></div><div class="crowd-metrics"><div class="crowd-metric"><span>Total votes</span><strong id="crowdTotalVotes">0</strong></div><div class="crowd-metric"><span id="crowdScoreLabel">Median score</span><strong id="crowdMedianScore">—</strong></div><div class="crowd-metric"><span>Positive share</span><strong id="crowdPositiveShare">—</strong></div><div class="crowd-metric"><span>Neutral share</span><strong id="crowdNeutralShare">—</strong></div><div class="crowd-metric"><span>Negative share</span><strong id="crowdNegativeShare">—</strong></div><div class="crowd-metric"><span>Confidence</span><strong id="crowdConfidence">—</strong></div></div><div class="crowd-actions"><button id="closeVoting" class="secondary-action" type="button" disabled>Close Voting</button><button id="generateCrowdForecast" class="primary-action" type="button" disabled>Generate Forecast</button></div><p class="crowd-method">Final crowd sentiment and recent price history are sent to HKU GenAI when configured; the chart keeps a transparent fallback path for demonstration. Synthetic scenarios are not real news.</p></div>
         </section>
         </div>
 
@@ -476,7 +478,7 @@
       const payload = window.CARBON_PRICE_DATA;
       const markets = payload.markets;
       const byId = new Map(markets.map((market) => [market.id, market]));
-      const state = { selected: markets.map((market) => market.id), currentIndex: 0, start: '', end: '', category: 'all', newsRequestId: 0, forecast: null, mode: 'market', observedSentiment: 0, scenarioScore: 0, scenarioKey: '', crowdKey: '', crowdSessionId: '', crowdSessionStatus: 'waiting', crowdRemote: false, crowdSyncTimer: null, crowdVotingClosed: false, crowdForecastGenerated: false, crowdVotes: [0, 0, 0, 0, 0], crowdScenarios: [], participantScenarioIndex: 0, participantVote: null };
+      const state = { selected: markets.map((market) => market.id), currentIndex: 0, start: '', end: '', category: 'all', newsRequestId: 0, forecast: null, mode: 'market', observedSentiment: 0, scenarioScore: 0, scenarioKey: '', crowdKey: '', crowdSessionId: '', crowdScenarioCursor: 0, crowdScenarioStarted: false, crowdSessionStatus: 'waiting', crowdRemote: false, crowdSyncTimer: null, crowdVotingClosed: false, crowdForecastGenerated: false, crowdVotes: [0, 0, 0, 0, 0], crowdScenarios: [], participantScenarioIndex: 0, participantVote: null };
       const joinParams = new URLSearchParams(window.location.search);
       const joinMode = joinParams.get('join') === '1';
       if (joinParams.get('market') && byId.has(joinParams.get('market'))) {
@@ -513,10 +515,14 @@
         const params = new URLSearchParams({ join: '1', market: market.id, start: state.start, end: state.end, session: crowdSessionCode(market) });
         return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
       };
-      const crowdScenariosFor = (market) => SYNTHETIC_SCENARIO_TEMPLATES.map((item, index) => ({ ...item, id: `${market.id}-scenario-${index + 1}`, index: index + 1 }));
+      const crowdScenariosFor = (market, scenarioIndex = 0) => {
+        const index = ((Number(scenarioIndex) || 0) + SYNTHETIC_SCENARIO_TEMPLATES.length) % SYNTHETIC_SCENARIO_TEMPLATES.length;
+        return [{ ...SYNTHETIC_SCENARIO_TEMPLATES[index], id: `${market.id}-scenario-${index + 1}`, index: index + 1 }];
+      };
 
-      function renderCrowdScenarios(market) {
-        state.crowdScenarios = crowdScenariosFor(market);
+      function renderCrowdScenarios(market, scenarioIndex = state.crowdScenarioCursor) {
+        state.crowdScenarioCursor = ((Number(scenarioIndex) || 0) + SYNTHETIC_SCENARIO_TEMPLATES.length) % SYNTHETIC_SCENARIO_TEMPLATES.length;
+        state.crowdScenarios = crowdScenariosFor(market, state.crowdScenarioCursor);
         $('crowdNewsList').innerHTML = state.crowdScenarios.map((item) => `<article class="synthetic-card"><div class="synthetic-card-head"><span>${escapeHtml(item.category)}</span><span>Scenario ${item.index}</span></div><h4>${escapeHtml(item.title)}</h4><p>${escapeHtml(item.summary)}</p><small class="synthetic-warning">Synthetic demo scenario — not a real news report.</small></article>`).join('');
         const code = crowdSessionCode(market);
         const joinUrl = crowdJoinUrl(market);
@@ -530,6 +536,20 @@
         $('participantMarket').textContent = `${market.name} · Crowd Sentiment Session`;
         $('participantSessionCode').textContent = `SESSION ${code}`;
         updateParticipantScenario();
+      }
+
+      function renderCrowdWaitingState(market) {
+        state.crowdScenarios = [];
+        $('crowdNewsList').innerHTML = '<div class="crowd-empty-state"><strong>Ready for the next scenario</strong><span>Click Start Session to reveal one synthetic news scenario.</span></div>';
+        $('crowdMarketLabel').textContent = market.name;
+        $('crowdPeriodLabel').textContent = `${formatCrowdPeriod(state.start)} – ${formatCrowdPeriod(state.end)}`;
+        $('crowdSourceLabel').textContent = 'Synthetic demo news';
+        $('crowdSessionCode').textContent = crowdSessionCode(market);
+        $('crowdJoinLink').textContent = crowdJoinUrl(market);
+        $('crowdQr').src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(crowdJoinUrl(market))}`;
+        $('crowdQr').alt = `QR code to join the ${market.name} crowd sentiment session`;
+        $('participantMarket').textContent = `${market.name} · Crowd Sentiment Session`;
+        $('participantSessionCode').textContent = `SESSION ${crowdSessionCode(market)}`;
       }
       const currentMarket = () => byId.get(state.selected[state.currentIndex]);
 
@@ -913,6 +933,11 @@
         if (!snapshot?.ok) return false;
         state.crowdSessionId = snapshot.session || state.crowdSessionId;
         state.crowdRemote = true;
+        if (snapshot.status !== 'waiting') {
+          state.crowdScenarioCursor = Number(snapshot.scenario_index) || 0;
+          state.crowdScenarioStarted = true;
+          renderCrowdScenarios(currentMarket(), state.crowdScenarioCursor);
+        }
         state.crowdVotes = Array.isArray(snapshot.votes) && snapshot.votes.length === 5 ? snapshot.votes.map((value) => Number(value) || 0) : state.crowdVotes;
         state.crowdVotingClosed = snapshot.status === 'closed';
         setCrowdSessionState(snapshot.status || 'waiting');
@@ -928,7 +953,7 @@
         const session = state.crowdSessionId || crowdSessionCode(market);
         try {
           const response = create
-            ? await fetch('/api/crowd/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session, market: market.id, start: state.start, end: state.end, reset: true }) })
+            ? await fetch('/api/crowd/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session, market: market.id, start: state.start, end: state.end, scenario_index: state.crowdScenarioCursor, reset: true }) })
             : await fetch(`/api/crowd/session?session=${encodeURIComponent(session)}`);
           const snapshot = await response.json();
           if (!response.ok) return false;
@@ -948,6 +973,7 @@
 
       function updateCrowdVoteChart(changedIndex = -1) {
         const total = state.crowdVotes.reduce((sum, count) => sum + count, 0);
+        $('crowdVotePanel').hidden = total === 0;
         const maxVotes = Math.max(1, ...state.crowdVotes);
         $('voteChart').querySelectorAll('.vote-column').forEach((column, index) => {
           column.querySelector('.vote-count').textContent = state.crowdVotes[index];
@@ -981,6 +1007,7 @@
         $('submitParticipantVote').disabled = true;
         $('participantConfirmation').classList.remove('visible');
         $('nextParticipantScenario').style.display = 'none';
+        document.querySelectorAll('.participant-option').forEach((button) => { button.disabled = false; });
         state.participantVote = null;
       }
 
@@ -989,6 +1016,8 @@
         if (state.crowdKey !== key) {
           state.crowdKey = key;
           state.crowdSessionId = crowdSessionCode(market);
+          state.crowdScenarioCursor = 0;
+          state.crowdScenarioStarted = false;
           state.crowdRemote = false;
           state.crowdSessionStatus = 'waiting';
           state.crowdVotingClosed = false;
@@ -997,7 +1026,8 @@
           state.participantScenarioIndex = 0;
           state.participantVote = null;
         }
-        renderCrowdScenarios(market);
+        if (state.crowdScenarioStarted) renderCrowdScenarios(market, state.crowdScenarioCursor);
+        else renderCrowdWaitingState(market);
         $('crowdScoreLabel').textContent = state.crowdVotingClosed ? 'Final crowd score' : 'Median score';
         $('closeVoting').disabled = state.crowdSessionStatus !== 'live';
         $('generateCrowdForecast').disabled = !state.crowdVotingClosed;
@@ -1031,14 +1061,14 @@
         const scenarioRows = simulationActive ? buildScenarioForecast(forecast, market) : [];
         const forecastValues = simulationActive
           ? scenarioRows.flatMap((point) => [point.scenario_price, point.scenario_lower, point.scenario_upper, point.predicted_price])
-          : crowdForecastVisible
-            ? crowdRows.flatMap((point) => [point.scenario_price, point.scenario_lower, point.scenario_upper, point.predicted_price])
-          : forecastRows.flatMap((point) => [point.predicted_price, point.lower_bound, point.upper_bound]);
+          : crowdActive
+            ? (crowdForecastVisible ? crowdRows.flatMap((point) => [point.scenario_price, point.scenario_lower, point.scenario_upper, point.predicted_price]) : [])
+            : forecastRows.flatMap((point) => [point.predicted_price, point.lower_bound, point.upper_bound]);
         const values = [...rows.map((row) => row.price), ...forecastValues];
         const min = Math.min(...values), max = Math.max(...values);
         const spread = max - min || Math.max(1, max * .04);
         const yMin = min - spread * .08, yMax = max + spread * .08;
-        const futureRows = crowdForecastVisible ? crowdRows : forecastRows;
+        const futureRows = simulationActive ? forecastRows : crowdActive ? (crowdForecastVisible ? crowdRows : []) : forecastRows;
         const startMs = Date.parse(`${rows[0].date}T00:00:00Z`), endDate = futureRows.at(-1)?.date || rows.at(-1).date, endMs = Date.parse(`${endDate}T00:00:00Z`);
         const xFor = (row) => left + (endMs === startMs ? plotW / 2 : (Date.parse(`${row.date}T00:00:00Z`) - startMs) / (endMs - startMs) * plotW);
         const yFor = (row, value = row.price ?? row.predicted_price) => top + (yMax - value) / (yMax - yMin) * plotH;
@@ -1070,7 +1100,7 @@
         const forecastBand = forecastRows.length ? `${forecastRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.upper_bound).toFixed(2)}`).join(' ')} ${[...forecastRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.lower_bound).toFixed(2)}`).join(' ')} Z` : '';
         const scenarioBand = scenarioRows.length ? `${scenarioRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_upper).toFixed(2)}`).join(' ')} ${[...scenarioRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_lower).toFixed(2)}`).join(' ')} Z` : '';
         const crowdBand = crowdRows.length ? `${crowdRows.map((point, index) => `${index ? 'L' : 'M'} ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_upper).toFixed(2)}`).join(' ')} ${[...crowdRows].reverse().map((point) => `L ${xFor(point).toFixed(2)} ${yFor(point, point.scenario_lower).toFixed(2)}`).join(' ')} Z` : '';
-        const forecastPoints = forecastRows.map((point) => `<circle class="${simulationActive ? 'baseline-point' : 'forecast-point'}" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point).toFixed(2)}" r="4" data-kind="AI baseline" data-date="${point.date}" data-price="${point.predicted_price}" data-lower="${point.lower_bound}" data-upper="${point.upper_bound}" />`).join('');
+        const forecastPoints = !crowdActive && forecastRows.map((point) => `<circle class="${simulationActive ? 'baseline-point' : 'forecast-point'}" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point).toFixed(2)}" r="4" data-kind="AI baseline" data-date="${point.date}" data-price="${point.predicted_price}" data-lower="${point.lower_bound}" data-upper="${point.upper_bound}" />`).join('');
         const scenarioPoints = scenarioRows.map((point) => `<circle class="scenario-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point, point.scenario_price).toFixed(2)}" r="4" data-kind="Simulated scenario" data-date="${point.date}" data-price="${point.scenario_price}" data-lower="${point.scenario_lower}" data-upper="${point.scenario_upper}" data-sentiment="${state.scenarioScore}" />`).join('');
         const crowdBaselinePoints = crowdRows.map((point) => `<circle class="crowd-baseline-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point, point.predicted_price).toFixed(2)}" r="4" data-kind="AI baseline" data-date="${point.date}" data-price="${point.predicted_price}" data-lower="${point.lower_bound}" data-upper="${point.upper_bound}" />`).join('');
         const crowdScenarioPoints = crowdRows.map((point) => `<circle class="crowd-scenario-point" tabindex="0" cx="${xFor(point).toFixed(2)}" cy="${yFor(point, point.scenario_price).toFixed(2)}" r="4" data-kind="Crowd-informed forecast" data-date="${point.date}" data-price="${point.scenario_price}" data-lower="${point.scenario_lower}" data-upper="${point.scenario_upper}" data-sentiment="${crowdMedianScore()}" />`).join('');
@@ -1080,12 +1110,12 @@
           ? `${forecastLine ? `<path class="baseline-line" d="${forecastLine}" />` : ''}${scenarioLine ? `<path class="scenario-line" d="${scenarioLine}" />` : ''}`
           : crowdActive && crowdForecastVisible
             ? `${crowdBaselineLine ? `<path class="crowd-baseline-line" d="${crowdBaselineLine}" />` : ''}${crowdForecastLine ? `<path class="crowd-forecast-line" d="${crowdForecastLine}" />` : ''}`
-          : `${forecastLine ? `<path class="forecast-line" d="${forecastLine}" />` : ''}`;
+          : crowdActive ? '' : `${forecastLine ? `<path class="forecast-line" d="${forecastLine}" />` : ''}`;
         const bandPath = simulationActive
           ? (scenarioBand ? `<path class="scenario-band" d="${scenarioBand}" />` : '')
-          : crowdActive && crowdForecastVisible
-            ? (crowdBand ? `<path class="crowd-band" d="${crowdBand}" />` : '')
-          : (forecastBand ? `<path class="forecast-band" d="${forecastBand}" />` : '');
+          : crowdActive
+            ? (crowdForecastVisible && crowdBand ? `<path class="crowd-band" d="${crowdBand}" />` : '')
+            : (forecastBand ? `<path class="forecast-band" d="${forecastBand}" />` : '');
         svg.innerHTML = `${grid}${labels}${bandPath}${divider}${actualPath}${futurePath}${points}${simulationActive ? scenarioPoints : ''}${crowdActive && crowdForecastVisible ? `${crowdBaselinePoints}${crowdScenarioPoints}` : ''}${forecastPoints}`;
         svg.querySelectorAll('.price-point, .forecast-point, .baseline-point, .scenario-point, .crowd-baseline-point, .crowd-scenario-point').forEach((point) => {
           const show = () => {
@@ -1114,7 +1144,7 @@
           $('priceChange').textContent = `Crowd forecast ${crowdDelta >= 0 ? '+' : ''}${formatPrice(market, crowdDelta)} (${crowdPct >= 0 ? '+' : ''}${crowdPct.toFixed(2)}%) over 14 days`;
           $('priceChange').className = `price-change ${crowdDelta > 0 ? 'positive' : crowdDelta < 0 ? 'negative' : 'neutral'}`;
         } else if (crowdActive) {
-          $('priceChange').textContent = 'Crowd forecast after voting';
+          $('priceChange').textContent = state.crowdSessionStatus === 'waiting' ? 'Start a session to collect one vote' : 'Forecast will appear after the vote';
           $('priceChange').className = 'price-change neutral';
         } else if (simulationActive && scenarioRows.length) {
           const scenarioDelta = scenarioRows.at(-1).scenario_price - last;
@@ -1156,7 +1186,7 @@
         $('marketNewsPanel').hidden = crowdActive;
         $('marketLegend').hidden = simulationActive || crowdActive;
         $('simulationLegend').hidden = !simulationActive;
-        $('crowdLegend').hidden = !crowdActive;
+        $('crowdLegend').hidden = !crowdActive || !state.crowdForecastGenerated;
         $('marketViewMode').classList.toggle('active', !simulationActive && !crowdActive);
         $('simulationMode').classList.toggle('active', simulationActive);
         $('crowdMode').classList.toggle('active', crowdActive);
@@ -1181,9 +1211,13 @@
 
       async function startCrowdSession() {
         if (state.mode !== 'crowd') setDashboardMode('crowd');
+        if (state.crowdScenarioStarted) state.crowdScenarioCursor = (state.crowdScenarioCursor + 1) % SYNTHETIC_SCENARIO_TEMPLATES.length;
+        state.crowdScenarioStarted = true;
+        renderCrowdScenarios(currentMarket(), state.crowdScenarioCursor);
         state.crowdVotingClosed = false;
         state.crowdForecastGenerated = false;
         state.crowdVotes = [0, 0, 0, 0, 0];
+        $('crowdLegend').hidden = true;
         $('crowdScoreLabel').textContent = 'Median score';
         $('closeVoting').disabled = false;
         $('generateCrowdForecast').disabled = true;
@@ -1227,6 +1261,7 @@
           state.forecast = null;
         }
         state.crowdForecastGenerated = true;
+        $('crowdLegend').hidden = false;
         $('generateCrowdForecast').textContent = 'Forecast generated';
         $('generateCrowdForecast').disabled = true;
         drawChart(market, rows, state.forecast);
@@ -1270,7 +1305,9 @@
           updateCrowdVoteChart(index);
         }
         $('participantConfirmation').classList.add('visible');
-        $('nextParticipantScenario').style.display = 'block';
+        await closeCrowdVoting();
+        document.querySelectorAll('.participant-option').forEach((button) => { button.disabled = true; });
+        $('nextParticipantScenario').style.display = 'none';
         $('submitParticipantVote').disabled = true;
       }
 
