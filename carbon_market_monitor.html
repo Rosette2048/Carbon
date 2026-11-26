@@ -478,7 +478,7 @@
       const payload = window.CARBON_PRICE_DATA;
       const markets = payload.markets;
       const byId = new Map(markets.map((market) => [market.id, market]));
-      const state = { selected: markets.map((market) => market.id), currentIndex: 0, start: '', end: '', category: 'all', newsRequestId: 0, forecast: null, mode: 'market', observedSentiment: 0, scenarioScore: 0, scenarioKey: '', crowdKey: '', crowdSessionId: '', crowdScenarioCursor: 0, crowdScenarioStarted: false, crowdSessionStatus: 'waiting', crowdRemote: false, crowdSyncTimer: null, crowdVotingClosed: false, crowdForecastGenerated: false, crowdVotes: [0, 0, 0, 0, 0], crowdScenarios: [], participantScenarioIndex: 0, participantVote: null };
+      const state = { selected: markets.map((market) => market.id), currentIndex: 0, start: '', end: '', category: 'all', newsRequestId: 0, forecast: null, mode: 'market', observedSentiment: 0, scenarioKey: '', crowdKey: '', crowdSessionId: '', crowdScenarioCursor: 0, crowdScenarioStarted: false, crowdSessionStatus: 'waiting', crowdRemote: false, crowdSyncTimer: null, crowdVotingClosed: false, crowdForecastGenerated: false, crowdVotes: [0, 0, 0, 0, 0], crowdScenarios: [], participantScenarioIndex: 0, participantVote: null, participantHasVoted: false };
       const joinParams = new URLSearchParams(window.location.search);
       const joinMode = joinParams.get('join') === '1';
       if (joinParams.get('market') && byId.has(joinParams.get('market'))) {
@@ -515,6 +515,7 @@
       const formatCrowdPeriod = (date) => date ? new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }) : 'Selected price period';
       const crowdScoreLabel = (score) => `${Number(score) >= 0 ? '+' : ''}${Number(score).toFixed(2)}`;
       const crowdSessionCode = (market) => `${market.id.toUpperCase()}-${(state.end || 'DEMO').replaceAll('-', '').slice(4) || 'DEMO'}`;
+      const participantVoteKey = () => `carbon-crowd-voted:${state.crowdSessionId}:${state.crowdScenarioCursor}`;
       const crowdJoinUrl = (market) => {
         const params = new URLSearchParams({ join: '1', market: market.id, start: state.start, end: state.end, session: crowdSessionCode(market) });
         return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
@@ -1012,6 +1013,14 @@
         $('participantConfirmation').classList.remove('visible');
         $('nextParticipantScenario').style.display = 'none';
         document.querySelectorAll('.participant-option').forEach((button) => { button.disabled = false; });
+        state.participantHasVoted = joinMode && window.sessionStorage.getItem(participantVoteKey()) === '1';
+        if (state.participantHasVoted) {
+          document.querySelectorAll('.participant-option').forEach((button) => { button.disabled = true; });
+          $('participantConfirmation').textContent = 'This device has already voted in this session.';
+          $('participantConfirmation').classList.add('visible');
+        } else {
+          $('participantConfirmation').textContent = 'Vote recorded. Voting remains open for other participants.';
+        }
         state.participantVote = null;
       }
 
@@ -1288,7 +1297,7 @@
       }
 
       async function submitParticipantVote() {
-        if (state.participantVote === null) return;
+        if (state.participantVote === null || state.participantHasVoted) return;
         if (state.crowdRemote && state.crowdSessionStatus !== 'live') return;
         if (joinMode && !state.crowdRemote) {
           await syncCrowdSession();
@@ -1306,8 +1315,10 @@
           state.crowdVotes[index] += 1;
           updateCrowdVoteChart(index);
         }
+        state.participantHasVoted = true;
+        if (joinMode) window.sessionStorage.setItem(participantVoteKey(), '1');
         $('participantConfirmation').classList.add('visible');
-        await closeCrowdVoting();
+        $('participantConfirmation').textContent = 'Vote recorded. Voting remains open for other participants.';
         document.querySelectorAll('.participant-option').forEach((button) => { button.disabled = true; });
         $('nextParticipantScenario').style.display = 'none';
         $('submitParticipantVote').disabled = true;
