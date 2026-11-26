@@ -900,7 +900,8 @@
         const scores = [];
         state.crowdVotes.forEach((count, index) => { for (let i = 0; i < count; i += 1) scores.push(CROWD_SCORE_VALUES[index]); });
         if (!scores.length) return 0;
-        return scores[Math.floor(scores.length / 2)];
+        const middle = Math.floor(scores.length / 2);
+        return scores.length % 2 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2;
       }
 
       function buildCrowdForecast(market, rows) {
