@@ -744,7 +744,7 @@ class Handler(SimpleHTTPRequestHandler):
             start = str(payload.get("start", ""))[:10]
             end = str(payload.get("end", ""))[:10]
             try:
-                scenario_index = max(0, min(3, int(payload.get("scenario_index", 0))))
+                scenario_index = max(0, min(7, int(payload.get("scenario_index", 0))))
             except (TypeError, ValueError):
                 scenario_index = 0
             if not session_id or not market or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end):
